@@ -21,16 +21,17 @@ export function YamiProvider({ children }) {
   const [radioMode, setRadioMode]         = useState(false);
   const [suggestions, setSuggestions]     = useState([]);
   const audioRef = useRef(null);
+
   // Always-fresh refs so navigation callbacks never close over stale state
   const queueRef        = useRef([]);
   const currentTrackRef = useRef(null);
   const suggestionsRef  = useRef([]);
   const historyRef      = useRef([]);
-<<<<<<< HEAD
-=======
-  // Track which suggestion trackIds have already been auto-queued so we never repeat them
+
+  // Track which suggestion trackIds have already been auto-queued
   const usedSuggestionIds = useRef(new Set());
->>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
+  // Track whether current skip was manual (true) or auto-advance (false)
+  const isManualSkipRef = useRef(false);
 
   useEffect(() => { queueRef.current        = queue;        }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
@@ -51,13 +52,11 @@ export function YamiProvider({ children }) {
       const genre  = track.primaryGenreName || '';
       const album  = track.collectionName || '';
 
-      // Hit Last.fm for genuinely similar tracks based on real listening data
       const similar = await getSimilarTracks(artist, name, 30);
 
       let itunesTracks = [];
 
       if (similar.length >= 5) {
-        // Search top Last.fm matches on iTunes in parallel batches
         const top = similar.slice(0, 20);
         for (let i = 0; i < top.length; i += 5) {
           const batch = top.slice(i, i + 5);
@@ -67,7 +66,6 @@ export function YamiProvider({ children }) {
           itunesTracks = itunesTracks.concat(results.flat());
         }
       } else {
-        // Fallback: Last.fm genre top tracks
         const genreTracks = await getSimilarByGenre(genre, 20);
         const results = await Promise.all(
           genreTracks.slice(0, 15).map(s => itunesSearch({ term: s.query, limit: 1 }).catch(() => []))
@@ -75,7 +73,6 @@ export function YamiProvider({ children }) {
         itunesTracks = results.flat();
       }
 
-      // Map back Last.fm match scores to iTunes results for smarter ordering
       const scoreMap = {};
       similar.forEach(s => { scoreMap[s.query.toLowerCase()] = s.match; });
 
@@ -91,11 +88,12 @@ export function YamiProvider({ children }) {
         });
 
       setSuggestions(filtered.length >= 3 ? filtered : itunesTracks.slice(0, 20));
+      // Reset used suggestion IDs when we fetch fresh suggestions for a new track
+      usedSuggestionIds.current.clear();
     } catch { setSuggestions([]); }
   }, []);
 
-  // Internal: play a track without modifying the queue (used by next/prev navigation)
-  // Uses ref so it never closes over stale currentTrack
+  // Internal: play a track without modifying the queue
   const _playTrackNoQueue = useCallback((track) => {
     if (currentTrackRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
@@ -132,39 +130,63 @@ export function YamiProvider({ children }) {
     if (currentTrack) setIsPlaying(p => !p);
   }, [currentTrack]);
 
-  const playNext = useCallback(() => {
+  const playNext = useCallback((manual = false) => {
     const q       = queueRef.current;
     const current = currentTrackRef.current;
     const suggs   = suggestionsRef.current;
     const hist    = historyRef.current;
 
-    if (repeat === 'one') {
+    if (repeat === 'one' && !manual) {
       if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
       return;
     }
+
     if (shuffle) {
       const candidates = q.filter(t => t.trackId !== current?.trackId);
       if (candidates.length) { _playTrackNoQueue(candidates[Math.floor(Math.random() * candidates.length)]); return; }
     }
+
     const idx  = q.findIndex(t => t.trackId === current?.trackId);
     const next = idx >= 0 ? (q[idx + 1] || (repeat === 'all' ? q[0] : null)) : null;
     if (next) { _playTrackNoQueue(next); return; }
 
-    // Auto-queue best suggestion (radio mode or end of queue)
-    if (suggs.length) {
+    // For manual skips: fetch fresh suggestions based on current track, pick best non-repeated one
+    if (manual && suggs.length) {
+      const recentIds = new Set(hist.slice(0, 8).map(t => t.trackId));
       const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
-<<<<<<< HEAD
-      const fresh = suggs.filter(t => !recentArtists.has(t.artistName));
-      const pool  = fresh.length ? fresh : suggs;
-      const pick  = pool[0];
-=======
-      // Filter out already-used suggestions AND recent artists to avoid cycles
-      const fresh = suggs.filter(t =>
+
+      // Priority: never-heard, different artist
+      let pick = suggs.find(t =>
+        !recentIds.has(t.trackId) &&
+        !usedSuggestionIds.current.has(t.trackId) &&
+        !recentArtists.has(t.artistName)
+      );
+      // Fallback: never-heard, any artist
+      if (!pick) pick = suggs.find(t =>
+        !recentIds.has(t.trackId) && !usedSuggestionIds.current.has(t.trackId)
+      );
+      // Last resort: just pick something not in recent history
+      if (!pick) pick = suggs.find(t => !recentIds.has(t.trackId));
+      if (!pick) {
+        usedSuggestionIds.current.clear();
+        pick = suggs[0];
+      }
+
+      if (pick) {
+        usedSuggestionIds.current.add(pick.trackId);
+        // Don't add to queue — just play it fresh; it'll be added via playTrack naturally
+        _playTrackNoQueue(pick);
+        return;
+      }
+    }
+
+    // Auto-advance (song ended naturally): queue up next suggestion
+    if (!manual && suggs.length) {
+      const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
+      let pool = suggs.filter(t =>
         !usedSuggestionIds.current.has(t.trackId) && !recentArtists.has(t.artistName)
       );
-      // Fall back to just unused suggestions, then reset used set if totally exhausted
-      let pool = fresh.length ? fresh
-        : suggs.filter(t => !usedSuggestionIds.current.has(t.trackId));
+      if (!pool.length) pool = suggs.filter(t => !usedSuggestionIds.current.has(t.trackId));
       if (!pool.length) {
         usedSuggestionIds.current.clear();
         pool = suggs.filter(t => !recentArtists.has(t.artistName));
@@ -172,11 +194,11 @@ export function YamiProvider({ children }) {
       }
       const pick = pool[0];
       usedSuggestionIds.current.add(pick.trackId);
->>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
       setQueue(q => [...q, pick]);
       _playTrackNoQueue(pick);
       return;
     }
+
     setIsPlaying(false);
   }, [shuffle, repeat, _playTrackNoQueue]);
 
@@ -188,6 +210,9 @@ export function YamiProvider({ children }) {
     const prev = idx > 0 ? q[idx - 1] : null;
     if (prev) _playTrackNoQueue(prev);
   }, [progress, _playTrackNoQueue]);
+
+  // Manual skip — exposed separately so player can call playNext(true)
+  const skipNext = useCallback(() => playNext(true), [playNext]);
 
   const addToQueue = useCallback((track) => {
     setQueue(q => q.find(t => t.trackId === track.trackId) ? q : [...q, track]);
@@ -250,7 +275,7 @@ export function YamiProvider({ children }) {
       currentTrack, isPlaying, queue, volume, muted, progress, duration,
       shuffle, repeat, liked, history, nowPlayingOpen, toast,
       radioMode, suggestions,
-      audioRef, playTrack, togglePlay, playNext, playPrev,
+      audioRef, playTrack, togglePlay, playNext, skipNext, playPrev,
       addToQueue, addManyToQueue, removeFromQueue, toggleLike, isLiked,
       setShuffle, cycleRepeat, setVolume, setMuted,
       setProgress, setDuration, setNowPlayingOpen, formatTime, showToast,

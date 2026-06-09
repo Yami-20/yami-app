@@ -1,10 +1,27 @@
-import { RiSettings3Line, RiVolumeUpFill, RiInformationLine, RiKeyboardLine } from 'react-icons/ri';
+import { RiSettings3Line, RiVolumeUpFill, RiInformationLine, RiKeyboardLine, RiUser3Line, RiDeleteBinLine } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
+import { useUser } from '../context/UserContext';
 
 const VERSION = require('../../package.json').version;
 
 export default function Settings() {
   const { volume, setVolume } = useYami();
+  const { profile, updateProfile } = useUser();
+
+  const handleResetProfile = () => {
+    if (window.confirm('Reset your profile? You\'ll be asked to enter your name again.')) {
+      localStorage.removeItem('yami_user_profile');
+      window.location.reload();
+    }
+  };
+
+  const handleClearData = () => {
+    if (window.confirm('Clear all liked songs and history? This cannot be undone.')) {
+      localStorage.removeItem('yami_liked');
+      localStorage.removeItem('yami_history');
+      window.location.reload();
+    }
+  };
 
   return (
     <main className="yami-main">
@@ -39,6 +56,53 @@ export default function Settings() {
             <span className="kbd-hint">{key}</span>
           </div>
         ))}
+      </div>
+
+      <div className="settings-group">
+        <h3 className="settings-group-title"><RiUser3Line /> Profile</h3>
+        <div className="settings-row">
+          <div>
+            <p className="settings-label">Display Name</p>
+            <p className="settings-desc">Currently: <strong>{profile.displayName || 'Not set'}</strong></p>
+          </div>
+          <button
+            onClick={handleResetProfile}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, color: 'var(--text-secondary)',
+              fontSize: 13, padding: '8px 14px', cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.08)'; e.target.style.color = 'var(--text)'; }}
+            onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.color = 'var(--text-secondary)'; }}
+          >
+            Reset Profile
+          </button>
+        </div>
+        <div className="settings-row">
+          <div>
+            <p className="settings-label">Clear Library Data</p>
+            <p className="settings-desc">Remove all liked songs and play history</p>
+          </div>
+          <button
+            onClick={handleClearData}
+            style={{
+              background: 'rgba(248,113,113,0.08)',
+              border: '1px solid rgba(248,113,113,0.2)',
+              borderRadius: 8, color: '#f87171',
+              fontSize: 13, padding: '8px 14px', cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+              display: 'flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+          >
+            <RiDeleteBinLine /> Clear Data
+          </button>
+        </div>
       </div>
 
       <div className="settings-group">

@@ -24,7 +24,7 @@ export default function YamiPlayer() {
   const navigate = useNavigate();
   const {
     currentTrack, isPlaying, volume, muted, progress, duration,
-    shuffle, repeat, togglePlay, playNext, playPrev,
+    shuffle, repeat, togglePlay, playNext, skipNext, playPrev,
     setVolume, setMuted, setProgress, setDuration,
     setShuffle, cycleRepeat, toggleLike, isLiked,
     setNowPlayingOpen, formatTime, audioRef, radioMode, toggleRadio,
@@ -45,13 +45,13 @@ export default function YamiPlayer() {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.code === 'Space')                    { e.preventDefault(); togglePlay(); }
-      if (e.code === 'ArrowRight' && e.altKey)   { e.preventDefault(); playNext(); }
+      if (e.code === 'ArrowRight' && e.altKey)   { e.preventDefault(); skipNext(); }
       if (e.code === 'ArrowLeft'  && e.altKey)   { e.preventDefault(); playPrev(); }
       if (e.code === 'KeyM')                     { setMuted(m => !m); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlay, playNext, playPrev, setMuted]);
+  }, [togglePlay, skipNext, playPrev, setMuted]);
 
   // ── Fetch stream URL for current track ──────────────────────────────────
   useEffect(() => {
@@ -203,7 +203,7 @@ export default function YamiPlayer() {
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
             {isPlaying ? <RiPauseFill /> : <RiPlayFill />}
           </button>
-          <button className="player-btn transport" onClick={playNext} title="Next (Alt+→)">
+          <button className="player-btn transport" onClick={skipNext} title="Next (Alt+→)">
             <RiSkipForwardFill />
           </button>
           <button className={`player-btn repeat${repeat !== 'off' ? ' active-mode' : ''}`}
