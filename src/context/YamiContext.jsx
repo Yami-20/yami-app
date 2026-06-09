@@ -1,38 +1,112 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { itunesSearch } from '../api/itunes';
-import { getSimilarTracks, getSimilarByGenre } from '../api/lastfm';
+import { getSimilarTracks, getSimilarArtistsTracks, getSimilarByGenre } from '../api/lastfm';
 
 const YamiContext = createContext();
 
+// ─── Suggestion engine ────────────────────────────────────────────────────────
+// Resolves a Last.fm track entry to an iTunes track object.
+// Uses "Artist Song" search, picks the best match by title similarity.
+async function resolveToItunes(entry) {
+  try {
+    const results = await itunesSearch({ term: entry.query, limit: 5 });
+    if (!results.length) return null;
+    // Prefer exact artist+title match, fall back to first result
+    const nameLower = entry.name.toLowerCase();
+    const exact = results.find(r =>
+      r.trackName.toLowerCase().includes(nameLower) ||
+      nameLower.includes(r.trackName.toLowerCase())
+    );
+    return exact || results[0];
+  } catch { return null; }
+}
+
+// Build a scored, deduplicated suggestion pool from multiple Last.fm sources.
+// Returns iTunes track objects sorted by relevance.
+async function buildSuggestionPool(track) {
+  const artist = track.artistName || '';
+  const name   = track.trackName  || '';
+  const genre  = track.primaryGenreName || '';
+
+  // Fire all three sources in parallel
+  const [similar, artistPool, genrePool] = await Promise.all([
+    getSimilarTracks(artist, name, 50),
+    getSimilarArtistsTracks(artist, 5),
+    getSimilarByGenre(genre, 20),
+  ]);
+
+  // Merge and deduplicate by "artist - name" key, keeping highest score
+  const scoreMap = new Map();
+  [...similar, ...artistPool, ...genrePool].forEach(entry => {
+    const key = `${entry.artist.toLowerCase()}|||${entry.name.toLowerCase()}`;
+    if (!scoreMap.has(key) || scoreMap.get(key).match < entry.match) {
+      scoreMap.set(key, entry);
+    }
+  });
+
+  // Sort by score descending, take top 60 candidates
+  const candidates = [...scoreMap.values()]
+    .sort((a, b) => b.match - a.match)
+    .slice(0, 60);
+
+  // Resolve to iTunes in parallel batches of 8
+  const resolved = [];
+  for (let i = 0; i < candidates.length; i += 8) {
+    const batch = candidates.slice(i, i + 8);
+    const results = await Promise.all(batch.map(resolveToItunes));
+    results.forEach((r, j) => {
+      if (r) resolved.push({ track: r, match: batch[j].match });
+    });
+    // Stop early if we already have 25+ good results
+    if (resolved.length >= 25) break;
+  }
+
+  // Final filter: remove the source track, dupes, and same album
+  const seen = new Set();
+  return resolved
+    .filter(({ track: t }) => {
+      if (t.trackId === track.trackId) return false;
+      if (seen.has(t.trackId)) return false;
+      seen.add(t.trackId);
+      return true;
+    })
+    .sort((a, b) => b.match - a.match)
+    .map(({ track: t }) => t);
+}
+
+// ─── Context ─────────────────────────────────────────────────────────────────
 export function YamiProvider({ children }) {
-  const [currentTrack, setCurrentTrack]   = useState(null);
-  const [isPlaying, setIsPlaying]         = useState(false);
-  const [queue, setQueue]                 = useState([]);
-  const [volume, setVolume]               = useState(0.8);
-  const [muted, setMuted]                 = useState(false);
-  const [progress, setProgress]           = useState(0);
-  const [duration, setDuration]           = useState(0);
-  const [shuffle, setShuffle]             = useState(false);
-  const [repeat, setRepeat]               = useState('off');
-  const [liked, setLiked]                 = useState([]);
-  const [history, setHistory]             = useState([]);
-  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
-  const [toast, setToast]                 = useState(null);
-  const [radioMode, setRadioMode]         = useState(false);
-  const [suggestions, setSuggestions]     = useState([]);
+  const [currentTrack,    setCurrentTrack]    = useState(null);
+  const [isPlaying,       setIsPlaying]       = useState(false);
+  const [queue,           setQueue]           = useState([]);
+  const [volume,          setVolume]          = useState(0.8);
+  const [muted,           setMuted]           = useState(false);
+  const [progress,        setProgress]        = useState(0);
+  const [duration,        setDuration]        = useState(0);
+  const [shuffle,         setShuffle]         = useState(false);
+  const [repeat,          setRepeat]          = useState('off');
+  const [liked,           setLiked]           = useState([]);
+  const [history,         setHistory]         = useState([]);
+  const [nowPlayingOpen,  setNowPlayingOpen]  = useState(false);
+  const [toast,           setToast]           = useState(null);
+  const [radioMode,       setRadioMode]       = useState(false);
+  const [suggestions,     setSuggestions]     = useState([]);
+
   const audioRef = useRef(null);
 
-  // Always-fresh refs so navigation callbacks never close over stale state
+  // Always-fresh refs so callbacks never close over stale state
   const queueRef        = useRef([]);
   const currentTrackRef = useRef(null);
   const suggestionsRef  = useRef([]);
   const historyRef      = useRef([]);
 
-  // Track which suggestion trackIds have already been auto-queued
-  const usedSuggestionIds = useRef(new Set());
-  // Track whether current skip was manual (true) or auto-advance (false)
+  // Global "played" set — persists across tracks so we never repeat anything
+  // already heard this session, regardless of which track triggered the suggestion
+  const playedIdsRef    = useRef(new Set());
+  // Tracks actively being suggested (index pointer into suggestions array)
+  const suggPointerRef  = useRef(0);
 
-  useEffect(() => { queueRef.current        = queue;        }, [queue]);
+  useEffect(() => { queueRef.current       = queue;       }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
   useEffect(() => { suggestionsRef.current  = suggestions;  }, [suggestions]);
   useEffect(() => { historyRef.current      = history;      }, [history]);
@@ -42,80 +116,77 @@ export function YamiProvider({ children }) {
     setTimeout(() => setToast(null), 2400);
   }, []);
 
-  // Fetch similar songs for radio/suggestions
+  // ── Suggestion fetching ───────────────────────────────────────────────────
   const fetchSuggestions = useCallback(async (track) => {
     if (!track) return;
     try {
-      const artist = track.artistName || '';
-      const name   = track.trackName  || '';
-      const genre  = track.primaryGenreName || '';
-      const album  = track.collectionName || '';
-
-      const similar = await getSimilarTracks(artist, name, 30);
-
-      let itunesTracks = [];
-
-      if (similar.length >= 5) {
-        const top = similar.slice(0, 20);
-        for (let i = 0; i < top.length; i += 5) {
-          const batch = top.slice(i, i + 5);
-          const results = await Promise.all(
-            batch.map(s => itunesSearch({ term: s.query, limit: 1 }).catch(() => []))
-          );
-          itunesTracks = itunesTracks.concat(results.flat());
-        }
-      } else {
-        const genreTracks = await getSimilarByGenre(genre, 20);
-        const results = await Promise.all(
-          genreTracks.slice(0, 15).map(s => itunesSearch({ term: s.query, limit: 1 }).catch(() => []))
-        );
-        itunesTracks = results.flat();
-      }
-
-      const scoreMap = {};
-      similar.forEach(s => { scoreMap[s.query.toLowerCase()] = s.match; });
-
-      const filtered = itunesTracks
-        .filter(t => t && t.trackId !== track.trackId)
-        .filter(t => t.artistName !== artist)
-        .filter(t => t.collectionName !== album)
-        .filter((t, i, arr) => arr.findIndex(x => x.trackId === t.trackId) === i)
-        .sort((a, b) => {
-          const ka = `${a.artistName} ${a.trackName}`.toLowerCase();
-          const kb = `${b.artistName} ${b.trackName}`.toLowerCase();
-          return (scoreMap[kb] || 0) - (scoreMap[ka] || 0);
-        });
-
-      setSuggestions(filtered.length >= 3 ? filtered : itunesTracks.slice(0, 20));
-      // Reset used suggestion IDs when we fetch fresh suggestions for a new track
-      usedSuggestionIds.current.clear();
+      const pool = await buildSuggestionPool(track);
+      // Filter out anything already played this session
+      const fresh = pool.filter(t => !playedIdsRef.current.has(t.trackId));
+      setSuggestions(fresh.length >= 3 ? fresh : pool);
+      suggPointerRef.current = 0;
     } catch { setSuggestions([]); }
   }, []);
 
-  // Internal: play a track without modifying the queue
+  // ── Pick next suggestion intelligently ───────────────────────────────────
+  // Avoids recent artists, recently played tracks, already-used suggestions.
+  // Rotates through the full pool before any repeats.
+  const pickNextSuggestion = useCallback(() => {
+    const suggs = suggestionsRef.current;
+    const hist  = historyRef.current;
+    if (!suggs.length) return null;
+
+    const recentIds     = new Set(hist.slice(0, 10).map(t => t.trackId));
+    const recentArtists = new Set(hist.slice(0, 6).map(t => t.artistName));
+
+    // Try to find: unplayed + not recent artist + not in recent history
+    let pick = suggs.find(t =>
+      !playedIdsRef.current.has(t.trackId) &&
+      !recentIds.has(t.trackId) &&
+      !recentArtists.has(t.artistName)
+    );
+    // Relax: unplayed + not in recent history (allow same artist)
+    if (!pick) pick = suggs.find(t =>
+      !playedIdsRef.current.has(t.trackId) && !recentIds.has(t.trackId)
+    );
+    // Relax more: anything unplayed
+    if (!pick) pick = suggs.find(t => !playedIdsRef.current.has(t.trackId));
+    // Pool exhausted — reset played set and try again from top
+    if (!pick) {
+      playedIdsRef.current.clear();
+      pick = suggs.find(t => !recentIds.has(t.trackId) && !recentArtists.has(t.artistName))
+          || suggs[0];
+    }
+
+    return pick || null;
+  }, []);
+
+  // ── Internal: play a track (no queue mutation) ────────────────────────────
   const _playTrackNoQueue = useCallback((track) => {
     if (currentTrackRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
       return;
     }
+    playedIdsRef.current.add(track.trackId);
     setCurrentTrack(track);
     setIsPlaying(true);
     setProgress(0);
-    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 50));
+    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100));
     fetchSuggestions(track);
   }, [fetchSuggestions]);
 
-  // Public: play a track and add it to queue if not already present
+  // ── Public: play a track (adds to queue) ─────────────────────────────────
   const playTrack = useCallback((track) => {
     if (currentTrackRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
       return;
     }
     const current = currentTrackRef.current;
+    playedIdsRef.current.add(track.trackId);
     setCurrentTrack(track);
     setIsPlaying(true);
     setProgress(0);
-    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 50));
+    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100));
     setQueue(q => {
       if (q.find(t => t.trackId === track.trackId)) return q;
       const idx = q.findIndex(t => t.trackId === current?.trackId);
@@ -129,11 +200,10 @@ export function YamiProvider({ children }) {
     if (currentTrack) setIsPlaying(p => !p);
   }, [currentTrack]);
 
+  // ── Next / Skip ───────────────────────────────────────────────────────────
   const playNext = useCallback((manual = false) => {
     const q       = queueRef.current;
     const current = currentTrackRef.current;
-    const suggs   = suggestionsRef.current;
-    const hist    = historyRef.current;
 
     if (repeat === 'one' && !manual) {
       if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
@@ -142,77 +212,46 @@ export function YamiProvider({ children }) {
 
     if (shuffle) {
       const candidates = q.filter(t => t.trackId !== current?.trackId);
-      if (candidates.length) { _playTrackNoQueue(candidates[Math.floor(Math.random() * candidates.length)]); return; }
-    }
-
-    const idx  = q.findIndex(t => t.trackId === current?.trackId);
-    const next = idx >= 0 ? (q[idx + 1] || (repeat === 'all' ? q[0] : null)) : null;
-    if (next) { _playTrackNoQueue(next); return; }
-
-    // For manual skips: fetch fresh suggestions based on current track, pick best non-repeated one
-    if (manual && suggs.length) {
-      const recentIds = new Set(hist.slice(0, 8).map(t => t.trackId));
-      const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
-
-      // Priority: never-heard, different artist
-      let pick = suggs.find(t =>
-        !recentIds.has(t.trackId) &&
-        !usedSuggestionIds.current.has(t.trackId) &&
-        !recentArtists.has(t.artistName)
-      );
-      // Fallback: never-heard, any artist
-      if (!pick) pick = suggs.find(t =>
-        !recentIds.has(t.trackId) && !usedSuggestionIds.current.has(t.trackId)
-      );
-      // Last resort: just pick something not in recent history
-      if (!pick) pick = suggs.find(t => !recentIds.has(t.trackId));
-      if (!pick) {
-        usedSuggestionIds.current.clear();
-        pick = suggs[0];
-      }
-
-      if (pick) {
-        usedSuggestionIds.current.add(pick.trackId);
-        // Don't add to queue — just play it fresh; it'll be added via playTrack naturally
-        _playTrackNoQueue(pick);
+      if (candidates.length) {
+        _playTrackNoQueue(candidates[Math.floor(Math.random() * candidates.length)]);
         return;
       }
     }
 
-    // Auto-advance (song ended naturally): queue up next suggestion
-    if (!manual && suggs.length) {
-      const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
-      let pool = suggs.filter(t =>
-        !usedSuggestionIds.current.has(t.trackId) && !recentArtists.has(t.artistName)
-      );
-      if (!pool.length) pool = suggs.filter(t => !usedSuggestionIds.current.has(t.trackId));
-      if (!pool.length) {
-        usedSuggestionIds.current.clear();
-        pool = suggs.filter(t => !recentArtists.has(t.artistName));
-        if (!pool.length) pool = suggs;
+    // Try queue first
+    const idx  = q.findIndex(t => t.trackId === current?.trackId);
+    const next = idx >= 0 ? (q[idx + 1] || (repeat === 'all' ? q[0] : null)) : null;
+    if (next) { _playTrackNoQueue(next); return; }
+
+    // Queue exhausted — pick from suggestion pool
+    const pick = pickNextSuggestion();
+    if (pick) {
+      if (!manual) {
+        // Auto-advance: add to queue so user can see what's playing
+        setQueue(q => [...q, pick]);
       }
-      const pick = pool[0];
-      usedSuggestionIds.current.add(pick.trackId);
-      setQueue(q => [...q, pick]);
       _playTrackNoQueue(pick);
       return;
     }
 
     setIsPlaying(false);
-  }, [shuffle, repeat, _playTrackNoQueue]);
+  }, [shuffle, repeat, _playTrackNoQueue, pickNextSuggestion]);
+
+  const skipNext = useCallback(() => playNext(true), [playNext]);
 
   const playPrev = useCallback(() => {
     const q       = queueRef.current;
     const current = currentTrackRef.current;
-    if (progress > 3) { if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); } return; }
+    if (progress > 3) {
+      if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); }
+      return;
+    }
     const idx  = q.findIndex(t => t.trackId === current?.trackId);
     const prev = idx > 0 ? q[idx - 1] : null;
     if (prev) _playTrackNoQueue(prev);
   }, [progress, _playTrackNoQueue]);
 
-  // Manual skip — exposed separately so player can call playNext(true)
-  const skipNext = useCallback(() => playNext(true), [playNext]);
-
+  // ── Queue management ──────────────────────────────────────────────────────
   const addToQueue = useCallback((track) => {
     setQueue(q => q.find(t => t.trackId === track.trackId) ? q : [...q, track]);
     showToast(`Added "${track.trackName}" to queue`);
@@ -221,8 +260,7 @@ export function YamiProvider({ children }) {
   const addManyToQueue = useCallback((tracks) => {
     setQueue(q => {
       const existing = new Set(q.map(t => t.trackId));
-      const newTracks = tracks.filter(t => !existing.has(t.trackId));
-      return [...q, ...newTracks];
+      return [...q, ...tracks.filter(t => !existing.has(t.trackId))];
     });
     showToast(`Added ${tracks.length} songs to queue`);
   }, [showToast]);
@@ -231,6 +269,7 @@ export function YamiProvider({ children }) {
     setQueue(q => q.filter(t => t.trackId !== trackId));
   }, []);
 
+  // ── Likes ─────────────────────────────────────────────────────────────────
   const toggleLike = useCallback((track) => {
     setLiked(l => {
       const has = l.find(t => t.trackId === track.trackId);
@@ -241,15 +280,10 @@ export function YamiProvider({ children }) {
 
   const isLiked = useCallback((trackId) => liked.some(t => t.trackId === trackId), [liked]);
 
-  const cycleRepeat = useCallback(() => {
-    setRepeat(r => r === 'off' ? 'all' : r === 'all' ? 'one' : 'off');
-  }, []);
-
-  const toggleRadio = useCallback(() => {
-    setRadioMode(r => {
-      showToast(!r ? 'Radio mode on — auto-queuing similar songs' : 'Radio mode off', 'info');
-      return !r;
-    });
+  // ── Misc ──────────────────────────────────────────────────────────────────
+  const cycleRepeat   = useCallback(() => setRepeat(r => r === 'off' ? 'all' : r === 'all' ? 'one' : 'off'), []);
+  const toggleRadio   = useCallback(() => {
+    setRadioMode(r => { showToast(!r ? 'Radio mode on' : 'Radio mode off', 'info'); return !r; });
   }, [showToast]);
 
   const formatTime = (secs) => {
@@ -257,6 +291,7 @@ export function YamiProvider({ children }) {
     return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
   };
 
+  // ── Persistence ───────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const l = localStorage.getItem('yami_liked');
@@ -266,7 +301,7 @@ export function YamiProvider({ children }) {
     } catch {}
   }, []);
 
-  useEffect(() => { try { localStorage.setItem('yami_liked', JSON.stringify(liked)); } catch {} }, [liked]);
+  useEffect(() => { try { localStorage.setItem('yami_liked',   JSON.stringify(liked));   } catch {} }, [liked]);
   useEffect(() => { try { localStorage.setItem('yami_history', JSON.stringify(history)); } catch {} }, [history]);
 
   return (
