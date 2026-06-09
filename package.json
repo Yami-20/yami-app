@@ -1,6 +1,6 @@
 {
   "name": "Yami",
-  "version": "0.5.20",
+  "version": "0.1.0",
   "description": "Yami — music player",
   "private": true,
   "main": "electron/main.js",
