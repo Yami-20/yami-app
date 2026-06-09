@@ -1,0 +1,127 @@
+name: Build Yami
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+
+  build-linux:
+    name: Build Linux (.deb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create placeholder icon if missing
+        run: |
+          mkdir -p build-resources
+          if [ ! -f build-resources/icon.png ]; then
+            apt-get install -y imagemagick 2>/dev/null || true
+            convert -size 512x512 xc:#a78bfa build-resources/icon.png 2>/dev/null || true
+          fi
+
+      - name: Download yt-dlp for Linux
+        run: |
+          curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o build-resources/yt-dlp
+          chmod a+rx build-resources/yt-dlp
+
+      - name: Build React
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Bundle backend server
+        run: npm run bundle-server
+
+      - name: Build Electron (.deb)
+        run: npx electron-builder --linux deb --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yami-linux-deb
+          path: dist/*.deb
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create placeholder icon if missing
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path build-resources
+          if (-not (Test-Path "build-resources/icon.ico")) {
+            Invoke-WebRequest -Uri "https://via.placeholder.com/256/a78bfa/ffffff?text=Y" -OutFile "build-resources/icon.ico" -ErrorAction SilentlyContinue
+          }
+
+      - name: Download yt-dlp for Windows
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "build-resources/yt-dlp.exe"
+
+      - name: Build React
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Bundle backend server
+        run: npm run bundle-server
+
+      - name: Build Electron (Windows)
+        run: npx electron-builder --win nsis portable --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yami-windows-exe
+          path: |
+            dist/*.exe
+            dist/*.msi
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

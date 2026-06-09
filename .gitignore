@@ -1,0 +1,25 @@
+# deps
+node_modules/
+android/node_modules/
+
+# build outputs
+build/
+dist/
+android/app/build/
+
+# env
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
