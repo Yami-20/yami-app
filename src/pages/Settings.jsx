@@ -1,4 +1,4 @@
-import { RiSettings3Line, RiVolumeUpFill, RiInformationLine, RiKeyboardLine, RiUser3Line, RiDeleteBinLine } from 'react-icons/ri';
+import { RiVolumeUpFill, RiInformationLine, RiKeyboardLine, RiUser3Line, RiDeleteBinLine } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
 import { useUser } from '../context/UserContext';
 
@@ -6,7 +6,7 @@ const VERSION = require('../../package.json').version;
 
 export default function Settings() {
   const { volume, setVolume } = useYami();
-  const { profile, updateProfile } = useUser();
+  const { profile } = useUser();
 
   const handleResetProfile = () => {
     if (window.confirm('Reset your profile? You\'ll be asked to enter your name again.')) {

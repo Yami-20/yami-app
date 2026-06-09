@@ -1,6 +1,5 @@
-import { RiPlayListLine, RiDeleteBin6Line, RiPlayFill, RiMusicLine } from 'react-icons/ri';
+import { RiPlayListLine, RiDeleteBin6Line, RiMusicLine } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
-import SongCard from '../components/SongCard';
 
 export default function Library() {
   const { queue, removeFromQueue, playTrack, currentTrack } = useYami();

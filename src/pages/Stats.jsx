@@ -5,7 +5,7 @@ import { useUser } from '../context/UserContext';
 import { Avatar } from '../components/Sidebar';
 
 export default function StatsPage() {
-  const { history, liked, queue } = useYami();
+  const { history } = useYami();
   const { profile } = useUser();
 
   const stats = useMemo(() => {

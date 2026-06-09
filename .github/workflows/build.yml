@@ -21,18 +21,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Create placeholder icon if missing
-        run: |
-          mkdir -p build-resources
-          if [ ! -f build-resources/icon.png ]; then
-            apt-get install -y imagemagick 2>/dev/null || true
-            convert -size 512x512 xc:#a78bfa build-resources/icon.png 2>/dev/null || true
-          fi
+        run: npm ci --legacy-peer-deps
 
       - name: Download yt-dlp for Linux
         run: |
+          mkdir -p build-resources
           curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o build-resources/yt-dlp
           chmod a+rx build-resources/yt-dlp
 
@@ -49,7 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload .deb artifacts
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: yami-linux-deb
@@ -77,19 +70,12 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Create placeholder icon if missing
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path build-resources
-          if (-not (Test-Path "build-resources/icon.ico")) {
-            Invoke-WebRequest -Uri "https://via.placeholder.com/256/a78bfa/ffffff?text=Y" -OutFile "build-resources/icon.ico" -ErrorAction SilentlyContinue
-          }
+        run: npm ci --legacy-peer-deps
 
       - name: Download yt-dlp for Windows
         shell: powershell
         run: |
+          New-Item -ItemType Directory -Force -Path build-resources
           Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "build-resources/yt-dlp.exe"
 
       - name: Build React
@@ -123,5 +109,3 @@ jobs:
             dist/*.msi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-

@@ -48,6 +48,7 @@ export default function LyricsPage() {
     let idx = 0;
     for (let i = 0; i < parsed.length; i++) { if (parsed[i].time <= progress) idx = i; }
     setActive(idx);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, parsed.length]);
 
   useEffect(() => {

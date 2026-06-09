@@ -31,7 +31,6 @@ export function YamiProvider({ children }) {
   // Track which suggestion trackIds have already been auto-queued
   const usedSuggestionIds = useRef(new Set());
   // Track whether current skip was manual (true) or auto-advance (false)
-  const isManualSkipRef = useRef(false);
 
   useEffect(() => { queueRef.current        = queue;        }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);

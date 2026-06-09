@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RiPlayFill, RiPauseFill, RiSkipForwardFill, RiSkipBackFill,
@@ -85,6 +85,7 @@ export default function YamiPlayer() {
       });
 
     return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.trackId]);
 
   // ── Prefetch next tracks immediately on track change (covers manual skips) ──
@@ -107,13 +108,11 @@ export default function YamiPlayer() {
         .then(url => { prefetchCache.current[target.trackId] = url; })
         .catch(() => {});
     });
-<<<<<<< HEAD
-  }, [currentTrack]); // runs every time the track changes
-=======
-  }, [currentTrack?.trackId]); // runs every time the track changes
->>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack?.trackId]); // intentional: only re-run when track changes
 
   // ── Prefetch next track again when 30s remain (safety net for auto-advance) ─
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!currentTrack || !duration || duration < 15) return;
     const timeLeft = duration - progress;
@@ -130,7 +129,8 @@ export default function YamiPlayer() {
     fetchStreamUrl(target.trackName, target.artistName, new AbortController().signal)
       .then(url => { prefetchCache.current[target.trackId] = url; })
       .catch(() => {});
-  }, [Math.floor(progress)]); // only re-run once per second max
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.floor(progress)]); // intentional: throttle to once per second
 
   // ── Apply stream URL to audio element ───────────────────────────────────
   useEffect(() => {
@@ -138,16 +138,19 @@ export default function YamiPlayer() {
     ref.current.src = streamUrl;
     ref.current.volume = muted ? 0 : volume;
     if (isPlaying) ref.current.play().catch(() => {});
-  }, [streamUrl]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamUrl]); // intentional: ref is stable, audio state handled separately
 
   useEffect(() => {
     if (!ref.current) return;
     if (isPlaying) ref.current.play().catch(() => {});
     else ref.current.pause();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
   useEffect(() => {
     if (ref.current) ref.current.volume = muted ? 0 : volume;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volume, muted]);
 
   const pct = duration ? (progress / duration) * 100 : 0;

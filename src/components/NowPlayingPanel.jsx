@@ -3,7 +3,7 @@ import { useYami } from '../context/YamiContext';
 
 export default function NowPlayingPanel() {
   const {
-    currentTrack, isPlaying, progress, duration, queue,
+    currentTrack, progress, duration, queue,
     nowPlayingOpen, setNowPlayingOpen,
     toggleLike, isLiked, addToQueue, playTrack, formatTime,
     setProgress, audioRef,

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import {
   RiHomeLine, RiSearchLine, RiPlayListLine, RiHeartFill,
-  RiHistoryLine, RiSettings3Line, RiMusic2Line,
+  RiHistoryLine, RiSettings3Line,
   RiSpotifyFill, RiRadioLine, RiBarChartLine, RiFileTextLine,
   RiEdit2Line, RiCheckLine, RiUser3Line,
 } from 'react-icons/ri';

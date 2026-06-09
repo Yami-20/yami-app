@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RiMusic2Line, RiCheckLine, RiUser3Line } from 'react-icons/ri';
+import { RiCheckLine, RiUser3Line } from 'react-icons/ri';
 import { useUser, getInitials } from '../context/UserContext';
 
 export default function UserSetup() {

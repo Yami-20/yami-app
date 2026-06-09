@@ -1,4 +1,4 @@
-import { RiAddLine, RiPauseFill, RiPlayFill, RiHeartFill, RiHeartLine } from 'react-icons/ri';
+import { RiAddLine, RiPlayFill, RiHeartFill, RiHeartLine } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
 
 function PlayingBars({ paused }) {
