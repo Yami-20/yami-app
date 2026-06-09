@@ -57,16 +57,20 @@ export default function YamiPlayer() {
   useEffect(() => {
     if (!currentTrack) return;
 
+    // Stop old track immediately — don't wait for new URL
+    if (ref.current) { ref.current.pause(); ref.current.src = ''; }
+    setStreamUrl(null);
+
     // Use prefetch cache → instant playback
     const cached = prefetchCache.current[currentTrack.trackId];
     if (cached) { setStreamUrl(cached); setLoading(false); return; }
 
-    // Abort any in-flight fetch
+    // Abort any in-flight fetch BEFORE starting the new one
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true); setStreamUrl(null);
+    setLoading(true);
 
     fetchStreamUrl(currentTrack.trackName, currentTrack.artistName, controller.signal)
       .then(url => {
@@ -81,7 +85,7 @@ export default function YamiPlayer() {
       });
 
     return () => controller.abort();
-  }, [currentTrack]);
+  }, [currentTrack?.trackId]);
 
   // ── Prefetch next tracks immediately on track change (covers manual skips) ──
   useEffect(() => {
@@ -103,7 +107,11 @@ export default function YamiPlayer() {
         .then(url => { prefetchCache.current[target.trackId] = url; })
         .catch(() => {});
     });
+<<<<<<< HEAD
   }, [currentTrack]); // runs every time the track changes
+=======
+  }, [currentTrack?.trackId]); // runs every time the track changes
+>>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
 
   // ── Prefetch next track again when 30s remain (safety net for auto-advance) ─
   useEffect(() => {

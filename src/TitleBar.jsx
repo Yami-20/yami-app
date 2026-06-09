@@ -25,7 +25,7 @@ export function TitleBar() {
         paddingLeft: 14, WebkitAppRegion: 'drag',
       }}>
         <img
-          src="/favicon.ico"
+          src={`${process.env.PUBLIC_URL}/logo.png`}
           alt="Yami"
           style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'contain' }}
         />

@@ -26,6 +26,11 @@ export function YamiProvider({ children }) {
   const currentTrackRef = useRef(null);
   const suggestionsRef  = useRef([]);
   const historyRef      = useRef([]);
+<<<<<<< HEAD
+=======
+  // Track which suggestion trackIds have already been auto-queued so we never repeat them
+  const usedSuggestionIds = useRef(new Set());
+>>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
 
   useEffect(() => { queueRef.current        = queue;        }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
@@ -148,9 +153,26 @@ export function YamiProvider({ children }) {
     // Auto-queue best suggestion (radio mode or end of queue)
     if (suggs.length) {
       const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
+<<<<<<< HEAD
       const fresh = suggs.filter(t => !recentArtists.has(t.artistName));
       const pool  = fresh.length ? fresh : suggs;
       const pick  = pool[0];
+=======
+      // Filter out already-used suggestions AND recent artists to avoid cycles
+      const fresh = suggs.filter(t =>
+        !usedSuggestionIds.current.has(t.trackId) && !recentArtists.has(t.artistName)
+      );
+      // Fall back to just unused suggestions, then reset used set if totally exhausted
+      let pool = fresh.length ? fresh
+        : suggs.filter(t => !usedSuggestionIds.current.has(t.trackId));
+      if (!pool.length) {
+        usedSuggestionIds.current.clear();
+        pool = suggs.filter(t => !recentArtists.has(t.artistName));
+        if (!pool.length) pool = suggs;
+      }
+      const pick = pool[0];
+      usedSuggestionIds.current.add(pick.trackId);
+>>>>>>> e4c632a (fix: stop suggestion cycling, reduce skip delay, fix titlebar icon)
       setQueue(q => [...q, pick]);
       _playTrackNoQueue(pick);
       return;
