@@ -83,18 +83,40 @@ export default function YamiPlayer() {
     return () => controller.abort();
   }, [currentTrack]);
 
-  // ── Prefetch next track — triggered once when 30s remain ────────────────
+  // ── Prefetch next tracks immediately on track change (covers manual skips) ──
+  useEffect(() => {
+    if (!currentTrack) return;
+    // Prefetch the next 2 tracks in queue right away
+    const idx = queue.findIndex(t => t.trackId === currentTrack.trackId);
+    const candidates = [];
+    if (idx >= 0 && queue[idx + 1]) candidates.push(queue[idx + 1]);
+    if (idx >= 0 && queue[idx + 2]) candidates.push(queue[idx + 2]);
+    // Also prefetch top suggestion if queue is running low
+    if (candidates.length === 0 && suggestions[0]) candidates.push(suggestions[0]);
+    if (candidates.length === 1 && suggestions[0] && suggestions[0].trackId !== candidates[0]?.trackId)
+      candidates.push(suggestions[0]);
+
+    candidates.forEach(target => {
+      if (!target || prefetchDone.current[target.trackId]) return;
+      prefetchDone.current[target.trackId] = true;
+      fetchStreamUrl(target.trackName, target.artistName, new AbortController().signal)
+        .then(url => { prefetchCache.current[target.trackId] = url; })
+        .catch(() => {});
+    });
+  }, [currentTrack]); // runs every time the track changes
+
+  // ── Prefetch next track again when 30s remain (safety net for auto-advance) ─
   useEffect(() => {
     if (!currentTrack || !duration || duration < 15) return;
     const timeLeft = duration - progress;
     if (timeLeft > 32 || timeLeft < 3) return;
 
     // Determine next track
-    const idx  = queue.findIndex(t => t.trackId === currentTrack.trackId);
-    const next = idx >= 0 ? queue[idx + 1] : null;
+    const idx    = queue.findIndex(t => t.trackId === currentTrack.trackId);
+    const next   = idx >= 0 ? queue[idx + 1] : null;
     const target = next || suggestions[0];
     if (!target) return;
-    if (prefetchDone.current[target.trackId]) return; // already prefetching/prefetched
+    if (prefetchDone.current[target.trackId]) return;
     prefetchDone.current[target.trackId] = true;
 
     fetchStreamUrl(target.trackName, target.artistName, new AbortController().signal)

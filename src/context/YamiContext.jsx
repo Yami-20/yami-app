@@ -21,6 +21,16 @@ export function YamiProvider({ children }) {
   const [radioMode, setRadioMode]         = useState(false);
   const [suggestions, setSuggestions]     = useState([]);
   const audioRef = useRef(null);
+  // Always-fresh refs so navigation callbacks never close over stale state
+  const queueRef        = useRef([]);
+  const currentTrackRef = useRef(null);
+  const suggestionsRef  = useRef([]);
+  const historyRef      = useRef([]);
+
+  useEffect(() => { queueRef.current        = queue;        }, [queue]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { suggestionsRef.current  = suggestions;  }, [suggestions]);
+  useEffect(() => { historyRef.current      = history;      }, [history]);
 
   const showToast = useCallback((msg, type = 'info') => {
     setToast({ msg, type, id: Date.now() });
@@ -80,8 +90,9 @@ export function YamiProvider({ children }) {
   }, []);
 
   // Internal: play a track without modifying the queue (used by next/prev navigation)
+  // Uses ref so it never closes over stale currentTrack
   const _playTrackNoQueue = useCallback((track) => {
-    if (currentTrack?.trackId === track.trackId) {
+    if (currentTrackRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
       return;
     }
@@ -90,63 +101,71 @@ export function YamiProvider({ children }) {
     setProgress(0);
     setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 50));
     fetchSuggestions(track);
-  }, [currentTrack, fetchSuggestions]);
+  }, [fetchSuggestions]);
 
   // Public: play a track and add it to queue if not already present
   const playTrack = useCallback((track) => {
-    if (currentTrack?.trackId === track.trackId) {
+    if (currentTrackRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
       return;
     }
+    const current = currentTrackRef.current;
     setCurrentTrack(track);
     setIsPlaying(true);
     setProgress(0);
     setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 50));
     setQueue(q => {
       if (q.find(t => t.trackId === track.trackId)) return q;
-      const idx = q.findIndex(t => t.trackId === currentTrack?.trackId);
+      const idx = q.findIndex(t => t.trackId === current?.trackId);
       if (idx === -1) return [...q, track];
       return [...q.slice(0, idx + 1), track, ...q.slice(idx + 1)];
     });
     fetchSuggestions(track);
-  }, [currentTrack, fetchSuggestions]);
+  }, [fetchSuggestions]);
 
   const togglePlay = useCallback(() => {
     if (currentTrack) setIsPlaying(p => !p);
   }, [currentTrack]);
 
   const playNext = useCallback(() => {
+    const q       = queueRef.current;
+    const current = currentTrackRef.current;
+    const suggs   = suggestionsRef.current;
+    const hist    = historyRef.current;
+
     if (repeat === 'one') {
       if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
       return;
     }
     if (shuffle) {
-      const candidates = queue.filter(t => t.trackId !== currentTrack?.trackId);
+      const candidates = q.filter(t => t.trackId !== current?.trackId);
       if (candidates.length) { _playTrackNoQueue(candidates[Math.floor(Math.random() * candidates.length)]); return; }
     }
-    const idx = queue.findIndex(t => t.trackId === currentTrack?.trackId);
-    const next = idx >= 0 ? (queue[idx + 1] || (repeat === 'all' ? queue[0] : null)) : null;
+    const idx  = q.findIndex(t => t.trackId === current?.trackId);
+    const next = idx >= 0 ? (q[idx + 1] || (repeat === 'all' ? q[0] : null)) : null;
     if (next) { _playTrackNoQueue(next); return; }
 
     // Auto-queue best suggestion (radio mode or end of queue)
-    if (suggestions.length) {
-      const recentArtists = new Set(history.slice(0, 5).map(t => t.artistName));
-      const fresh = suggestions.filter(t => !recentArtists.has(t.artistName));
-      const pool  = fresh.length ? fresh : suggestions;
+    if (suggs.length) {
+      const recentArtists = new Set(hist.slice(0, 5).map(t => t.artistName));
+      const fresh = suggs.filter(t => !recentArtists.has(t.artistName));
+      const pool  = fresh.length ? fresh : suggs;
       const pick  = pool[0];
       setQueue(q => [...q, pick]);
       _playTrackNoQueue(pick);
       return;
     }
     setIsPlaying(false);
-  }, [queue, currentTrack, shuffle, repeat, suggestions, history, _playTrackNoQueue]);
+  }, [shuffle, repeat, _playTrackNoQueue]);
 
   const playPrev = useCallback(() => {
+    const q       = queueRef.current;
+    const current = currentTrackRef.current;
     if (progress > 3) { if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); } return; }
-    const idx = queue.findIndex(t => t.trackId === currentTrack?.trackId);
-    const prev = idx > 0 ? queue[idx - 1] : null;
+    const idx  = q.findIndex(t => t.trackId === current?.trackId);
+    const prev = idx > 0 ? q[idx - 1] : null;
     if (prev) _playTrackNoQueue(prev);
-  }, [queue, currentTrack, progress, _playTrackNoQueue]);
+  }, [progress, _playTrackNoQueue]);
 
   const addToQueue = useCallback((track) => {
     setQueue(q => q.find(t => t.trackId === track.trackId) ? q : [...q, track]);
