@@ -44,7 +44,10 @@ export default function Sidebar() {
   return (
     <aside className="yami-sidebar">
       <div className="yami-logo">
-        <h1>ya<span>mi</span></h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/logo.png" alt="Yami" style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0 }} />
+          <h1>YA<span>MI</span></h1>
+        </div>
       </div>
 
       <nav className="sb-section">

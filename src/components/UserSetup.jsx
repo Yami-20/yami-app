@@ -27,8 +27,8 @@ export default function UserSetup() {
         gap: 20, maxWidth: 400, width: '90%',
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <RiMusic2Line style={{ fontSize: 28, color: 'var(--accent)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <img src="/logo.png" alt="Yami" style={{ width: 56, height: 56, borderRadius: 14 }} />
           <span style={{
             fontSize: 22, fontWeight: 800, letterSpacing: 3,
             background: 'var(--accent-grad)',

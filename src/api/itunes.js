@@ -16,7 +16,7 @@ async function fetchWithRetry(url, retries = 3, delay = 600) {
 }
 
 export async function itunesSearch(params) {
-  const qs = new URLSearchParams({ entity: 'song', ...params }).toString();
+  const qs = new URLSearchParams({ entity: 'song', media: 'music', ...params }).toString();
   const data = await fetchWithRetry(`${BASE}?${qs}`);
-  return (data.results || []).filter(t => t.previewUrl);
+  return (data.results || []).filter(t => t.wrapperType === 'track' && t.kind === 'song');
 }
