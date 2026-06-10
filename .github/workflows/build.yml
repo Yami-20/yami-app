@@ -37,6 +37,14 @@ jobs:
       - name: Bundle backend server
         run: npm run bundle-server
 
+      - name: Verify build assets
+        run: |
+          echo "Checking required files..."
+          test -f build-resources/icon.png    && echo "✓ icon.png" || (echo "✗ icon.png missing" && exit 1)
+          test -f build-resources/server.bundle.js && echo "✓ server.bundle.js" || (echo "✗ server.bundle.js missing" && exit 1)
+          test -f build-resources/yt-dlp     && echo "✓ yt-dlp" || (echo "✗ yt-dlp missing" && exit 1)
+          test -d build                       && echo "✓ build dir" || (echo "✗ build dir missing" && exit 1)
+
       - name: Build Electron (.deb)
         run: npx electron-builder --linux deb --x64
         env:
@@ -86,26 +94,47 @@ jobs:
       - name: Bundle backend server
         run: npm run bundle-server
 
+      - name: Verify build assets
+        shell: powershell
+        run: |
+          $files = @(
+            "build-resources/icon.ico",
+            "build-resources/server.bundle.js",
+            "build-resources/yt-dlp.exe"
+          )
+          $allGood = $true
+          foreach ($f in $files) {
+            if (Test-Path $f) {
+              $size = (Get-Item $f).Length
+              Write-Host "✓ $f ($size bytes)"
+              if ($size -lt 1000) {
+                Write-Error "✗ $f is too small ($size bytes) — likely corrupt"
+                $allGood = $false
+              }
+            } else {
+              Write-Error "✗ $f not found"
+              $allGood = $false
+            }
+          }
+          if (-not $allGood) { exit 1 }
+
       - name: Build Electron (Windows)
         run: npx electron-builder --win nsis portable --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_HARD_LINKS: false
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: yami-windows-exe
-          path: |
-            dist/*.exe
-            dist/*.msi
+          path: dist/*.exe
           retention-days: 30
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.exe
-            dist/*.msi
+          files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

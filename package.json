@@ -81,14 +81,12 @@
       "build/**/*",
       "electron/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "build-resources/server.bundle.js",
-        "to": "server.bundle.js"
-      }
-    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
     "electronVersion": "31.0.0",
     "linux": {
+      "icon": "build-resources/icon.png",
       "target": [
         {
           "target": "deb",
@@ -101,9 +99,12 @@
       "executableArgs": [
         "--no-sandbox"
       ],
-      "icon": "build-resources/icon.png",
       "maintainer": "Yami <yami@yami.app>",
       "extraResources": [
+        {
+          "from": "build-resources/server.bundle.js",
+          "to": "server.bundle.js"
+        },
         {
           "from": "build-resources/yt-dlp",
           "to": "yt-dlp"
@@ -116,6 +117,7 @@
       }
     },
     "win": {
+      "icon": "build-resources/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -130,13 +132,20 @@
           ]
         }
       ],
-      "icon": "build-resources/icon.ico",
       "extraResources": [
+        {
+          "from": "build-resources/server.bundle.js",
+          "to": "server.bundle.js"
+        },
         {
           "from": "build-resources/yt-dlp.exe",
           "to": "yt-dlp.exe"
         }
       ]
+    },
+    "mac": {
+      "icon": "build-resources/icon.png",
+      "category": "public.app-category.music"
     },
     "nsis": {
       "oneClick": false,
