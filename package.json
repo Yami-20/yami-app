@@ -1,6 +1,6 @@
 {
   "name": "yami",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Yami — a sleek, intelligent music player with radio mode and smart song suggestions.",
   "private": true,
   "main": "electron/main.js",
@@ -71,7 +71,7 @@
   "build": {
     "appId": "com.yami.app",
     "productName": "Yami",
-    "copyright": "Copyright © 2025 Yami",
+    "copyright": "Copyright © 2026 Yami",
     "extends": null,
     "directories": {
       "output": "dist",

@@ -1,10 +1,10 @@
 <div align="center">
   <img src="build-resources/logo.png" width="80" alt="Yami" />
   <h1>Yami</h1>
-  <p>A dark, fast, free music player — powered by iTunes & Spotify</p>
+  <p>A dark, intelligent music player — powered by iTunes, Last.fm & Spotify</p>
 
   ![Version](https://img.shields.io/github/v/release/Yami-20/yami-app?style=flat-square&color=a78bfa)
-  ![Platform](https://img.shields.io/badge/platform-Linux-blue?style=flat-square)
+  ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT-pink?style=flat-square)
 </div>
 
@@ -19,103 +19,98 @@ Yami is a free, open-source desktop music player built with Electron + React. It
 ## Features
 
 - 🎵 **Instant music streaming** — search and play any song, no account needed
-- 🟢 **Spotify import** — connect your free Spotify account, browse your playlists and Liked Songs
+- 🧠 **Smart radio** — multi-source suggestion engine (Last.fm similar tracks + similar artists + genre + mood tags) that never repeats songs and avoids clustering same artists back-to-back
+- 🟢 **Spotify import** — connect your Spotify account, browse playlists and Liked Songs
 - ❤️ **Liked Songs** — like tracks and build your local library
-- 📻 **Radio mode** — auto-queues similar songs when your queue ends
-- 🕒 **Recently Played** — full playback history
-- 🎨 **Glassmorphism UI** — dark purple aesthetic with blur effects
-- ⌨️ **Keyboard friendly** — search with Enter, control playback inline
+- 📻 **Radio mode** — auto-queues similar songs when your queue ends, refills in the background
+- 🕒 **Recently Played** — full playback history with stats
+- 📊 **Stats page** — minutes listened, top tracks, top artists
+- 🎤 **Synced lyrics** — real-time word-highlighted lyrics powered by lrclib
+- 🎨 **Glassmorphism UI** — dark purple aesthetic, smooth animations
+- ⌨️ **Keyboard shortcuts** — Space (play/pause), Alt+→ (next), Alt+← (prev), M (mute)
 - 🔊 **Queue management** — reorder, remove, clear
 - 🖥️ **Native Electron app** — custom titlebar, frameless window
 
 ---
 
-## Installation (Linux)
+## Installation
 
-### Option 1 — Download (recommended)
+### Linux
 
 1. Go to [Releases](../../releases/latest)
-2. Download `yami_0.4.3_amd64.deb`
+2. Download `yami_1.1.0_amd64.deb`
 3. Install:
 ```bash
-sudo dpkg -i yami_0.4.3_amd64.deb
+sudo dpkg -i yami_1.1.0_amd64.deb
 ```
 4. Launch from your app menu or run `yami`
 
+### Windows
+
+1. Go to [Releases](../../releases/latest)
+2. Download `yami-Setup-1.1.0.exe` (installer) or `yami-1.1.0-portable.exe` (no install needed)
+3. Run the installer or portable exe
+
 ---
 
-### Option 2 — Build from source
+## Build from source
 
-**Requirements:** Node.js 18+, yt-dlp
+**Requirements:** Node.js 20+, yt-dlp
 
 ```bash
 git clone https://github.com/Yami-20/yami-app.git
 cd yami-app
-npm install
+npm install --legacy-peer-deps
+
+# Linux .deb
 npm run electron:build:linux
-sudo dpkg -i dist/yami_*_amd64.deb
+
+# Windows .exe
+npm run electron:build:win
 ```
 
 ---
 
-## Spotify Setup
+## yt-dlp dependency
 
-Yami uses Spotify only as a **library browser** — it reads your playlists and matches songs via iTunes for playback. No Premium needed.
+The streaming backend uses yt-dlp to fetch audio streams. The build workflow downloads it automatically. For local dev:
 
-1. Go to the **Spotify** tab in Yami
-2. Click **Log in with Spotify**
-3. Authorize in your browser — you'll be redirected back automatically
-4. Browse your playlists and click **Import** to add them to your queue
-
-> Your Spotify credentials are never stored by Yami. Login uses OAuth PKCE — industry standard, no secrets involved.
-
----
-
-## Tech Stack
-
-| Layer | Tech |
-|---|---|
-| UI | React 19, React Router |
-| Desktop | Electron 31 |
-| Styling | CSS (glassmorphism, custom design system) |
-| Music | iTunes Search API |
-| Spotify | Spotify Web API (PKCE OAuth) |
-| Streaming | yt-dlp + Express backend |
-| Icons | React Icons (Remix) |
-| Fonts | Syne, DM Sans, DM Mono |
-
----
-
-## Project Structure
-
-```
-yami-app/
-├── electron/          # Electron main process + preload
-├── src/
-│   ├── api/           # iTunes + Spotify API clients
-│   ├── components/    # Sidebar, Player, NowPlaying, Toast
-│   ├── context/       # Global state (YamiContext)
-│   ├── pages/         # Home, Search, Library, Liked, History, Settings, Spotify
-│   └── styles/        # yami.css — full design system
-├── build-resources/   # App icons
-└── server.js          # Local Express server for yt-dlp streaming
+**Linux:**
+```bash
+sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+sudo chmod a+rx /usr/local/bin/yt-dlp
 ```
 
+**Windows:** Download `yt-dlp.exe` from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) and place it in your PATH.
+
 ---
 
-## Contributing
-
-Pull requests are welcome. For major changes, open an issue first.
+## Local development
 
 ```bash
-git clone https://github.com/Yami-20/yami-app.git
-cd yami-app
-npm install
-npm run electron:dev   # Start in dev mode
+npm install --legacy-peer-deps
+
+# Web app (React only)
+npm start
+
+# Desktop (Electron dev mode)
+node server.js &
+npm run electron:dev
 ```
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / Pause |
+| `Alt + →` | Next track |
+| `Alt + ←` | Previous track |
+| `M` | Toggle mute |
 
 ---
 
 ## License
 
-MIT © [Yami-20](https://github.com/Yami-20)
+MIT © 2026 Yami
