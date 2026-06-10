@@ -10,7 +10,6 @@ async function lfm(params) {
   return data;
 }
 
-// Similar tracks to a given song
 export async function getSimilarTracks(artist, track, limit = 50) {
   try {
     const data = await lfm({ method: 'track.getSimilar', artist, track, limit });
@@ -23,7 +22,6 @@ export async function getSimilarTracks(artist, track, limit = 50) {
   } catch { return []; }
 }
 
-// Top tracks for an artist (used to widen pool when similar tracks are thin)
 export async function getArtistTopTracks(artist, limit = 10) {
   try {
     const data = await lfm({ method: 'artist.getTopTracks', artist, limit });
@@ -36,7 +34,6 @@ export async function getArtistTopTracks(artist, limit = 10) {
   } catch { return []; }
 }
 
-// Similar artists → their top tracks (great for widening the pool)
 export async function getSimilarArtistsTracks(artist, limit = 5) {
   try {
     const data = await lfm({ method: 'artist.getSimilar', artist, limit });
@@ -48,7 +45,6 @@ export async function getSimilarArtistsTracks(artist, limit = 5) {
   } catch { return []; }
 }
 
-// Genre top tracks fallback
 export async function getSimilarByGenre(genre, limit = 20) {
   try {
     const data = await lfm({ method: 'tag.getTopTracks', tag: genre.toLowerCase(), limit });
@@ -57,6 +53,27 @@ export async function getSimilarByGenre(genre, limit = 20) {
       artist: t.artist?.name || '',
       name:   t.name || '',
       match:  0.4,
+    }));
+  } catch { return []; }
+}
+
+// NEW: Fetch tags/genres for a track — used for richer fallback seeding
+export async function getTrackTags(artist, track) {
+  try {
+    const data = await lfm({ method: 'track.getTopTags', artist, track });
+    return (data.toptags?.tag || []).slice(0, 3).map(t => t.name.toLowerCase());
+  } catch { return []; }
+}
+
+// NEW: Tag-based top tracks for a specific mood/genre tag
+export async function getTagTopTracks(tag, limit = 20) {
+  try {
+    const data = await lfm({ method: 'tag.getTopTracks', tag: tag.toLowerCase(), limit });
+    return (data.tracks?.track || []).map(t => ({
+      query:  `${t.artist?.name || ''} ${t.name}`.trim(),
+      artist: t.artist?.name || '',
+      name:   t.name || '',
+      match:  0.45,
     }));
   } catch { return []; }
 }
