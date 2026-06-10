@@ -17,6 +17,7 @@ extraResources:
 extraMetadata:
   main: electron/main.js
 linux:
+  icon: build-resources/icon.png
   target:
     - target: deb
       arch:
@@ -26,6 +27,7 @@ linux:
     - from: build-resources/yt-dlp
       to: yt-dlp
 win:
+  icon: build-resources/icon.ico
   target:
     - target: nsis
       arch:
@@ -36,6 +38,9 @@ win:
   extraResources:
     - from: build-resources/yt-dlp.exe
       to: yt-dlp.exe
+mac:
+  icon: build-resources/icon.png
+  category: public.app-category.music
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
