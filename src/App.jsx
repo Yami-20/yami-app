@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { YamiProvider } from './context/YamiContext';
 import { UserProvider, useUser } from './context/UserContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import UserSetup from './components/UserSetup';
 import YamiPlayer from './components/YamiPlayer';
@@ -17,30 +18,45 @@ import Spotify from './pages/Spotify';
 import SpotifyCallback from './pages/SpotifyCallback';
 import Stats from './pages/Stats';
 import Lyrics from './pages/Lyrics';
+import { useEffect } from 'react';
 import './styles/yami.css';
 
 const isElectron = !!window.electronAPI;
 
 function AppInner() {
   const { setupDone } = useUser();
+
+  // Auto-updater notification
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    const clean = window.electronAPI.onUpdateDownloaded((d) => {
+      // Use native confirm since we don't have showToast here
+      if (window.confirm(`Yami v${d.version} is ready. Restart now to update?`)) {
+        window.location.reload();
+      }
+    });
+    return () => clean?.();
+  }, []);
   if (!setupDone) return <UserSetup />;
   return (
     <HashRouter>
       {isElectron && <TitleBar />}
       <div className="yami-layout yami-shell" style={isElectron ? { paddingTop: 32 } : {}}>
         <Sidebar />
-        <Routes>
-          <Route path="/"        element={<Home />} />
-          <Route path="/search"  element={<Search />} />
-          <Route path="/library" element={<Library />} />
-          <Route path="/liked"   element={<Liked />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/spotify"  element={<Spotify />} />
-          <Route path="/spotify/callback" element={<SpotifyCallback />} />
-          <Route path="/stats"   element={<Stats />} />
-          <Route path="/lyrics"  element={<Lyrics />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/"        element={<Home />} />
+            <Route path="/search"  element={<Search />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/liked"   element={<Liked />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/spotify"  element={<Spotify />} />
+            <Route path="/spotify/callback" element={<SpotifyCallback />} />
+            <Route path="/stats"   element={<Stats />} />
+            <Route path="/lyrics"  element={<Lyrics />} />
+          </Routes>
+        </ErrorBoundary>
         <YamiPlayer />
       </div>
       <NowPlayingPanel />
@@ -51,10 +67,12 @@ function AppInner() {
 
 export default function App() {
   return (
-    <UserProvider>
-      <YamiProvider>
-        <AppInner />
-      </YamiProvider>
-    </UserProvider>
+    <ErrorBoundary>
+      <UserProvider>
+        <YamiProvider>
+          <AppInner />
+        </YamiProvider>
+      </UserProvider>
+    </ErrorBoundary>
   );
 }

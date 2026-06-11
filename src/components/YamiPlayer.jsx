@@ -1,18 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RiPlayFill, RiPauseFill, RiSkipForwardFill, RiSkipBackFill,
   RiVolumeUpFill, RiVolumeMuteFill, RiMusicLine,
   RiShuffleLine, RiRepeat2Line, RiRepeatOneLine,
   RiHeartLine, RiHeartFill, RiPlayListAddLine, RiArrowUpSLine,
-  RiRadioLine,
+  RiRadioLine, RiWifiOffLine,
 } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
 
 const BACKEND = 'http://localhost:3001';
+const STREAM_TTL = 4 * 60 * 60 * 1000; // 4h — matches server
 
 async function fetchStreamUrl(trackName, artistName, signal) {
-  const q = `${trackName} ${artistName}`;
+  const q   = `${trackName} ${artistName}`;
   const res = await fetch(`${BACKEND}/stream?q=${encodeURIComponent(q)}`, { signal });
   if (!res.ok) throw new Error('Stream fetch failed');
   const data = await res.json();
@@ -28,59 +29,102 @@ export default function YamiPlayer() {
     setVolume, setMuted, setProgress, setDuration,
     setShuffle, cycleRepeat, toggleLike, isLiked,
     setNowPlayingOpen, formatTime, audioRef, radioMode, toggleRadio,
-    suggestions, queue,
+    suggestions, queue, suggestionsLoading, showToast,
   } = useYami();
 
-  const ref              = audioRef;
-  const [streamUrl, setStreamUrl] = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const prefetchCache    = useRef({});   // trackId -> url
-  const prefetchDone     = useRef({});   // trackId -> bool (already prefetched)
-  const abortRef         = useRef(null); // abort controller for current fetch
+  const ref    = audioRef;
+  const [streamUrl, setStreamUrl]       = useState(null);
+  const [loading, setLoading]           = useState(false);
+  const [offline, setOffline]           = useState(false);
+  const prefetchCache = useRef({});  // trackId → { url, ts }
+  const prefetchDone  = useRef({});  // trackId → bool
+  const abortRef      = useRef(null);
   const liked = currentTrack ? isLiked(currentTrack.trackId) : false;
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  // ── Backend health monitor ────────────────────────────────────────────────
+  useEffect(() => {
+    let timer;
+    async function check() {
+      try {
+        const res = await fetch(`${BACKEND}/health`, { signal: AbortSignal.timeout(3000) });
+        setOffline(!res.ok);
+      } catch { setOffline(true); }
+      timer = setTimeout(check, 15000);
+    }
+    check();
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ── Network online/offline ────────────────────────────────────────────────
+  useEffect(() => {
+    const onOnline  = () => { setOffline(false); showToast('Back online', 'info'); };
+    const onOffline = () => { setOffline(true);  showToast('You\'re offline', 'remove'); };
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+  }, [showToast]);
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.code === 'Space')                    { e.preventDefault(); togglePlay(); }
-      if (e.code === 'ArrowRight' && e.altKey)   { e.preventDefault(); skipNext(); }
-      if (e.code === 'ArrowLeft'  && e.altKey)   { e.preventDefault(); playPrev(); }
-      if (e.code === 'KeyM')                     { setMuted(m => !m); }
+      if (e.code === 'Space')                  { e.preventDefault(); togglePlay(); }
+      if (e.code === 'ArrowRight' && e.altKey) { e.preventDefault(); skipNext(); }
+      if (e.code === 'ArrowLeft'  && e.altKey) { e.preventDefault(); playPrev(); }
+      if (e.code === 'KeyM')                   { setMuted(m => !m); }
     };
+    // Media keys via Electron IPC
+    const cleanups = [];
+    if (window.electronAPI) {
+      cleanups.push(window.electronAPI.onMediaPlayPause(() => togglePlay()));
+      cleanups.push(window.electronAPI.onMediaNext(() => skipNext()));
+      cleanups.push(window.electronAPI.onMediaPrev(() => playPrev()));
+      cleanups.push(window.electronAPI.onMediaStop(() => setMuted(true)));
+    }
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); cleanups.forEach(fn => fn && fn()); };
   }, [togglePlay, skipNext, playPrev, setMuted]);
 
-  // ── Fetch stream URL for current track ──────────────────────────────────
+  // ── Check if cached URL is still fresh ────────────────────────────────────
+  const isFresh = useCallback((trackId) => {
+    const entry = prefetchCache.current[trackId];
+    return entry && (Date.now() - entry.ts < STREAM_TTL);
+  }, []);
+
+  // ── Fetch stream URL for current track ────────────────────────────────────
   useEffect(() => {
     if (!currentTrack) return;
-
-    // Stop old track immediately — don't wait for new URL
     if (ref.current) { ref.current.pause(); ref.current.src = ''; }
     setStreamUrl(null);
 
-    // Use prefetch cache → instant playback
-    const cached = prefetchCache.current[currentTrack.trackId];
-    if (cached) { setStreamUrl(cached); setLoading(false); return; }
+    // Use prefetch cache if fresh
+    if (isFresh(currentTrack.trackId)) {
+      setStreamUrl(prefetchCache.current[currentTrack.trackId].url);
+      setLoading(false);
+      return;
+    }
 
-    // Abort any in-flight fetch BEFORE starting the new one
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-
     setLoading(true);
 
     fetchStreamUrl(currentTrack.trackName, currentTrack.artistName, controller.signal)
       .then(url => {
-        prefetchCache.current[currentTrack.trackId] = url;
-        setStreamUrl(url); setLoading(false);
+        prefetchCache.current[currentTrack.trackId] = { url, ts: Date.now() };
+        setStreamUrl(url);
+        setLoading(false);
       })
       .catch(err => {
         if (err.name === 'AbortError') return;
-        // Fallback to iTunes preview
-        setStreamUrl(currentTrack.previewUrl || null);
+        // Fallback to iTunes 30s preview
+        if (currentTrack.previewUrl) {
+          showToast('Using preview — full stream unavailable', 'info');
+          setStreamUrl(currentTrack.previewUrl);
+        } else {
+          showToast('Could not load stream', 'remove');
+        }
         setLoading(false);
       });
 
@@ -88,58 +132,66 @@ export default function YamiPlayer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.trackId]);
 
-  // ── Prefetch next tracks immediately on track change (covers manual skips) ──
+  // ── Re-fetch if URL expired before playback resumes ───────────────────────
+  useEffect(() => {
+    if (!currentTrack || !isPlaying || loading) return;
+    if (streamUrl && !isFresh(currentTrack.trackId)) {
+      setLoading(true);
+      fetchStreamUrl(currentTrack.trackName, currentTrack.artistName, new AbortController().signal)
+        .then(url => {
+          prefetchCache.current[currentTrack.trackId] = { url, ts: Date.now() };
+          setStreamUrl(url);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
+
+  // ── Prefetch next tracks on track change ──────────────────────────────────
   useEffect(() => {
     if (!currentTrack) return;
-    // Prefetch the next 2 tracks in queue right away
     const idx = queue.findIndex(t => t.trackId === currentTrack.trackId);
     const candidates = [];
     if (idx >= 0 && queue[idx + 1]) candidates.push(queue[idx + 1]);
     if (idx >= 0 && queue[idx + 2]) candidates.push(queue[idx + 2]);
-    // Also prefetch top suggestion if queue is running low
     if (candidates.length === 0 && suggestions[0]) candidates.push(suggestions[0]);
-    if (candidates.length === 1 && suggestions[0] && suggestions[0].trackId !== candidates[0]?.trackId)
+    if (candidates.length === 1 && suggestions[0]?.trackId !== candidates[0]?.trackId)
       candidates.push(suggestions[0]);
 
     candidates.forEach(target => {
       if (!target || prefetchDone.current[target.trackId]) return;
       prefetchDone.current[target.trackId] = true;
       fetchStreamUrl(target.trackName, target.artistName, new AbortController().signal)
-        .then(url => { prefetchCache.current[target.trackId] = url; })
+        .then(url => { prefetchCache.current[target.trackId] = { url, ts: Date.now() }; })
         .catch(() => {});
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack?.trackId]); // intentional: only re-run when track changes
+  }, [currentTrack?.trackId]);
 
-  // ── Prefetch next track again when 30s remain (safety net for auto-advance) ─
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // ── Prefetch when 30s remain ──────────────────────────────────────────────
   useEffect(() => {
     if (!currentTrack || !duration || duration < 15) return;
     const timeLeft = duration - progress;
     if (timeLeft > 32 || timeLeft < 3) return;
-
-    // Determine next track
     const idx    = queue.findIndex(t => t.trackId === currentTrack.trackId);
-    const next   = idx >= 0 ? queue[idx + 1] : null;
-    const target = next || suggestions[0];
-    if (!target) return;
-    if (prefetchDone.current[target.trackId]) return;
+    const target = (idx >= 0 ? queue[idx + 1] : null) || suggestions[0];
+    if (!target || prefetchDone.current[target.trackId]) return;
     prefetchDone.current[target.trackId] = true;
-
     fetchStreamUrl(target.trackName, target.artistName, new AbortController().signal)
-      .then(url => { prefetchCache.current[target.trackId] = url; })
+      .then(url => { prefetchCache.current[target.trackId] = { url, ts: Date.now() }; })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Math.floor(progress)]); // intentional: throttle to once per second
+  }, [Math.floor(progress)]);
 
-  // ── Apply stream URL to audio element ───────────────────────────────────
+  // ── Apply stream URL ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!ref.current || !streamUrl) return;
     ref.current.src = streamUrl;
     ref.current.volume = muted ? 0 : volume;
     if (isPlaying) ref.current.play().catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamUrl]); // intentional: ref is stable, audio state handled separately
+  }, [streamUrl]);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -157,7 +209,7 @@ export default function YamiPlayer() {
 
   const handleSeek = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const t = ((e.clientX - rect.left) / rect.width) * duration;
+    const t    = ((e.clientX - rect.left) / rect.width) * duration;
     if (ref.current) ref.current.currentTime = t;
     setProgress(t);
   };
@@ -172,6 +224,12 @@ export default function YamiPlayer() {
         onEnded={playNext}
       />
 
+      {offline && (
+        <div className="offline-banner">
+          <RiWifiOffLine /> Offline — playback unavailable
+        </div>
+      )}
+
       {/* LEFT */}
       <div className="player-track-info">
         {currentTrack?.artworkUrl60
@@ -180,7 +238,7 @@ export default function YamiPlayer() {
           : <div className="player-art-placeholder"><RiMusicLine /></div>}
         <div className="player-meta">
           <div className="player-track-name">
-            {loading ? 'Streaming…' : (currentTrack?.trackName ?? 'Nothing playing')}
+            {loading ? 'Loading stream…' : (currentTrack?.trackName ?? 'Nothing playing')}
           </div>
           <div className="player-artist">{currentTrack?.artistName ?? '—'}</div>
         </div>
@@ -204,9 +262,12 @@ export default function YamiPlayer() {
           </button>
           <button className="player-btn play" onClick={togglePlay}
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
-            {isPlaying ? <RiPauseFill /> : <RiPlayFill />}
+            {loading
+              ? <span className="player-spin" />
+              : isPlaying ? <RiPauseFill /> : <RiPlayFill />}
           </button>
-          <button className="player-btn transport" onClick={skipNext} title="Next (Alt+→)">
+          <button className={`player-btn transport${suggestionsLoading ? ' loading-next' : ''}`}
+            onClick={skipNext} title="Next (Alt+→)">
             <RiSkipForwardFill />
           </button>
           <button className={`player-btn repeat${repeat !== 'off' ? ' active-mode' : ''}`}

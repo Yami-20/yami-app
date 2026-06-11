@@ -116,8 +116,8 @@ export function YamiProvider({ children }) {
   const [currentTrack,   setCurrentTrack]   = useState(null);
   const [isPlaying,      setIsPlaying]      = useState(false);
   const [queue,          setQueue]          = useState([]);
-  const [volume,         setVolume]         = useState(0.8);
-  const [muted,          setMuted]          = useState(false);
+  const [volume, setVolume] = useState(() => { try { const v = localStorage.getItem('yami_volume'); return v ? parseFloat(v) : 0.8; } catch { return 0.8; } });
+  const [muted, setMuted] = useState(() => { try { return localStorage.getItem('yami_muted') === 'true'; } catch { return false; } });
   const [progress,       setProgress]       = useState(0);
   const [duration,       setDuration]       = useState(0);
   const [shuffle,        setShuffle]        = useState(false);
@@ -128,6 +128,7 @@ export function YamiProvider({ children }) {
   const [toast,          setToast]          = useState(null);
   const [radioMode,      setRadioMode]      = useState(false);
   const [suggestions,    setSuggestions]    = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const audioRef = useRef(null);
 
@@ -159,6 +160,7 @@ export function YamiProvider({ children }) {
   // ── Fetch suggestions ─────────────────────────────────────────────────────
   // Cancels any in-flight fetch, builds a new pool biased away from recent artists.
   const fetchSuggestions = useCallback(async (track) => {
+    setSuggestionsLoading(true);
     if (!track) return;
     if (fetchAbortRef.current) fetchAbortRef.current.abort = true;
     const token = { abort: false };
@@ -390,6 +392,8 @@ export function YamiProvider({ children }) {
 
   useEffect(() => { try { localStorage.setItem('yami_liked',   JSON.stringify(liked));   } catch {} }, [liked]);
   useEffect(() => { try { localStorage.setItem('yami_history', JSON.stringify(history)); } catch {} }, [history]);
+  useEffect(() => { try { localStorage.setItem('yami_volume', String(volume)); } catch {} }, [volume]);
+  useEffect(() => { try { localStorage.setItem('yami_muted',  String(muted));  } catch {} }, [muted]);
 
   // ── Seed played set from history on load so we don't replay old songs ──────
   useEffect(() => {
@@ -402,9 +406,9 @@ export function YamiProvider({ children }) {
     <YamiContext.Provider value={{
       currentTrack, isPlaying, queue, volume, muted, progress, duration,
       shuffle, repeat, liked, history, nowPlayingOpen, toast,
-      radioMode, suggestions,
+      radioMode, suggestions, suggestionsLoading,
       audioRef, playTrack, togglePlay, playNext, skipNext, playPrev,
-      addToQueue, addManyToQueue, removeFromQueue, toggleLike, isLiked,
+      addToQueue, addManyToQueue, removeFromQueue, setQueue, toggleLike, isLiked,
       setShuffle, cycleRepeat, setVolume, setMuted,
       setProgress, setDuration, setNowPlayingOpen, formatTime, showToast,
       toggleRadio, fetchSuggestions,
@@ -415,3 +419,4 @@ export function YamiProvider({ children }) {
 }
 
 export const useYami = () => useContext(YamiContext);
+
