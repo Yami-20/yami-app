@@ -1,3 +1,4 @@
+import logoSrc from './assets/logo.png';
 import { RiSubtractLine, RiCheckboxBlankLine, RiCloseLine } from 'react-icons/ri';
 
 export function TitleBar() {
@@ -25,7 +26,7 @@ export function TitleBar() {
         paddingLeft: 14, WebkitAppRegion: 'drag',
       }}>
         <img
-          src={`${process.env.PUBLIC_URL}/logo.png`}
+          src={logoSrc}
           alt="Yami"
           style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'contain' }}
         />

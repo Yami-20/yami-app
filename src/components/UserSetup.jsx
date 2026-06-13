@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logoSrc from '../assets/logo.png';
 import { RiCheckLine, RiUser3Line } from 'react-icons/ri';
 import { useUser, getInitials } from '../context/UserContext';
 
@@ -28,7 +29,7 @@ export default function UserSetup() {
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <img src="/logo.png" alt="Yami" style={{ width: 56, height: 56, borderRadius: 14 }} />
+          <img src={logoSrc} alt="Yami" style={{ width: 56, height: 56, borderRadius: 14 }} />
           <span style={{
             fontSize: 22, fontWeight: 800, letterSpacing: 3,
             background: 'var(--accent-grad)',

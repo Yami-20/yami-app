@@ -252,9 +252,10 @@ export function YamiProvider({ children }) {
       return;
     }
     playedIds.current.add(track.trackId);
+    // Batch: set track + clear progress atomically; isPlaying stays true
     setCurrentTrack(track);
-    setIsPlaying(true);
     setProgress(0);
+    setIsPlaying(true); // explicit true — never assume it's already true
     setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100));
     fetchSuggestions(track);
   }, [fetchSuggestions]);

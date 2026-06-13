@@ -6,6 +6,7 @@ import {
   RiSpotifyFill, RiRadioLine, RiBarChartLine, RiFileTextLine,
   RiEdit2Line, RiCheckLine, RiUser3Line,
 } from 'react-icons/ri';
+import logoSrc from '../assets/logo.png';
 import { useYami }  from '../context/YamiContext';
 import { useUser, getInitials } from '../context/UserContext';
 
@@ -45,7 +46,7 @@ export default function Sidebar() {
     <aside className="yami-sidebar">
       <div className="yami-logo">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/logo.png" alt="Yami" style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0 }} />
+          <img src={logoSrc} alt="Yami" style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0 }} />
           <h1>YA<span>MI</span></h1>
         </div>
       </div>

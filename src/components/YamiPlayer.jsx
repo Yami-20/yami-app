@@ -184,17 +184,21 @@ export default function YamiPlayer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Math.floor(progress)]);
 
-  // ── Apply stream URL ──────────────────────────────────────────────────────
+  // ── Apply stream URL — always start playback when URL lands ─────────────
   useEffect(() => {
     if (!ref.current || !streamUrl) return;
     ref.current.src = streamUrl;
     ref.current.volume = muted ? 0 : volume;
-    if (isPlaying) ref.current.play().catch(() => {});
+    // Always call play() — isPlaying is already true from _playTrackNoQueue
+    ref.current.play().catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamUrl]);
 
   useEffect(() => {
     if (!ref.current) return;
+    // Guard: don't call play/pause if src is not yet set
+    const src = ref.current.src;
+    if (!src || src === window.location.href) return;
     if (isPlaying) ref.current.play().catch(() => {});
     else ref.current.pause();
   // eslint-disable-next-line react-hooks/exhaustive-deps
