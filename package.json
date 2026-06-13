@@ -44,11 +44,7 @@
     "electron:dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "npm run build && npm run bundle-server && electron-builder",
     "electron:build:win": "npm run build && npm run bundle-server && electron-builder --win",
-    "electron:build:linux": "npm run build && npm run bundle-server && electron-builder --linux",
-    "cap:init": "npx cap init yami com.yami.app",
-    "cap:add:android": "npx cap add android",
-    "cap:sync": "npm run build && npx cap sync android",
-    "cap:open": "npx cap open android"
+    "electron:build:linux": "npm run build && npm run bundle-server && electron-builder --linux"
   },
   "eslintConfig": {
     "extends": [
@@ -84,7 +80,6 @@
     "extraMetadata": {
       "main": "electron/main.js"
     },
-    "electronVersion": "31.0.0",
     "linux": {
       "icon": "build-resources/icon.png",
       "target": [

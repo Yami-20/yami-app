@@ -1,25 +1,28 @@
-# deps
+# Dependencies
 node_modules/
-android/node_modules/
 
-# build outputs
+# Build outputs (generated, not source)
 build/
 dist/
-android/app/build/
+build-resources/server.bundle.js
 
-# env
+# Environment
 .env
 .env.local
 .env.production
+.env.development
 
 # OS
 .DS_Store
 Thumbs.db
 
-# editor
+# Editor
 .vscode/
 .idea/
 
-# logs
+# Logs
 *.log
 npm-debug.log*
+
+# Test coverage
+coverage/
