@@ -2387,3 +2387,511 @@ input[type=range] {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* ══════════════════════════════════════════════════════════
+   YAMI — Theme v4: HIGH-GRAPHIC MODERN STREAMING
+   Inspired by: Apple Music, Tidal, Spotify Premium
+   Palette: Deep Midnight + Warm Ember + Frosted Glass
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Override root tokens with richer palette ────────────── */
+:root {
+  /* Richer blacks with subtle warmth */
+  --bg-primary:       #0c0c0e;
+  --bg-secondary:     #111116;
+  --surface:          #18181f;
+  --surface-elevated: #1f1f2a;
+  --surface-hover:    #252532;
+  --surface-active:   #2c2c3c;
+
+  /* Ember accent stays but richer */
+  --accent:           #ff5733;
+  --accent-primary:   #ff5733;
+  --accent-secondary: #cc3a1a;
+  --accent-hover:     #ff7a5c;
+  --accent-grad:      linear-gradient(135deg, #ff5733 0%, #ff2d55 100%);
+  --accent-dim:       rgba(255,87,51,0.12);
+  --accent-glow:      rgba(255,87,51,0.22);
+
+  /* Richer text hierarchy */
+  --text-primary:   #f8f8ff;
+  --text-secondary: #9898aa;
+  --text-muted:     #55555f;
+  --text:           var(--text-primary);
+  --muted:          var(--text-muted);
+  --muted-light:    var(--text-secondary);
+
+  /* Borders with subtle blue undertone */
+  --border: rgba(255,255,255,0.06);
+}
+
+/* ── Body — subtle ambient gradient (not heavy, just depth) ─ */
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,87,51,0.06) 0%, transparent 60%),
+    var(--bg-primary) !important;
+}
+
+/* ── Sidebar — premium glass effect ─────────────────────── */
+.yami-sidebar {
+  background: rgba(12,12,14,0.92) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+/* ── Logo text — gradient brand mark ─────────────────────── */
+.yami-logo-text {
+  background: linear-gradient(135deg, #fff 30%, #ff5733 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Nav links — refined hover ───────────────────────────── */
+.yami-nav-link {
+  border-radius: 8px;
+  margin: 1px 8px;
+  padding: 9px 12px;
+  transition: background 100ms ease, color 100ms ease;
+}
+.yami-nav-link:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+.yami-nav-link.active {
+  background: rgba(255,87,51,0.12) !important;
+  border-left: 2px solid var(--accent) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+/* ── Player bar — premium frosted glass ───────────────────── */
+.yami-player {
+  background: rgba(12,12,14,0.88) !important;
+  backdrop-filter: blur(32px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(180%) !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.5), 0 -40px 80px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Player art — elevated card with glow ─────────────────── */
+.player-art {
+  border-radius: 6px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06) !important;
+  transition: transform 200ms ease, box-shadow 200ms ease !important;
+}
+.player-art:hover {
+  transform: scale(1.04) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,87,51,0.3) !important;
+  opacity: 1 !important;
+}
+
+/* ── Play button — Apple Music style white pill ───────────── */
+.player-btn.play {
+  width: 40px !important;
+  height: 40px !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 50% !important;
+  font-size: 17px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
+  transition: transform 150ms ease, box-shadow 150ms ease !important;
+}
+.player-btn.play:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+  background: #f0f0f0 !important;
+}
+.player-btn.play:active {
+  transform: scale(0.96) !important;
+}
+
+/* ── Transport buttons — cleaner ─────────────────────────── */
+.player-btn.transport {
+  color: var(--text-secondary);
+  font-size: 19px;
+  transition: color 100ms ease, transform 100ms ease;
+}
+.player-btn.transport:hover {
+  color: var(--text-primary);
+  transform: scale(1.08);
+}
+
+/* ── Progress bar — thicker, thumb always visible ────────── */
+.progress-bar {
+  height: 4px !important;
+  border-radius: 4px !important;
+  background: rgba(255,255,255,0.1) !important;
+  cursor: pointer;
+  position: relative;
+  transition: height 150ms ease;
+}
+.progress-bar:hover {
+  height: 6px !important;
+}
+.progress-fill {
+  height: 100% !important;
+  background: var(--text-primary) !important;
+  border-radius: 4px !important;
+}
+.yami-player.is-playing .progress-fill {
+  background: var(--accent) !important;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  transition: transform 150ms ease;
+  pointer-events: none;
+}
+.progress-bar:hover .progress-fill::after {
+  transform: translateY(-50%) scale(1);
+}
+
+/* ── Track table — Spotify-like rows ─────────────────────── */
+.track-table { border-collapse: collapse; width: 100%; }
+.track-table-head th {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.track-row {
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+.track-row:hover { background: rgba(255,255,255,0.04) !important; }
+.track-row:hover .track-act-btn { opacity: 1; }
+.track-row td { padding: 6px 12px; vertical-align: middle; }
+
+/* ── Track thumbnails — square with soft shadow ───────────── */
+.track-thumb {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 4px !important;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Song cards — Spotify grid card style ─────────────────── */
+.song-card {
+  background: var(--surface) !important;
+  border-radius: 10px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease !important;
+  cursor: pointer;
+}
+.song-card:hover {
+  background: var(--surface-hover) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.song-card-img {
+  border-radius: 6px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  margin-bottom: 14px !important;
+}
+
+/* ── Page hero — gradient with blur overlay ───────────────── */
+.page-hero {
+  position: relative;
+  padding: 36px 36px 28px !important;
+  margin: -28px -28px 24px !important;
+  overflow: hidden;
+}
+.page-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, var(--bg-primary) 100%);
+  pointer-events: none;
+}
+.page-hero-content { position: relative; z-index: 1; }
+.page-hero-title {
+  font-size: 48px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1.5px !important;
+  line-height: 1.05 !important;
+  color: #fff !important;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+}
+.page-hero-kicker {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.15em !important;
+  color: rgba(255,255,255,0.7) !important;
+  margin-bottom: 6px !important;
+}
+.page-hero-sub {
+  font-size: 14px !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+/* ── Hero buttons ─────────────────────────────────────────── */
+.hero-play-btn {
+  padding: 12px 28px !important;
+  border-radius: 50px !important;
+  background: #fff !important;
+  color: #000 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease !important;
+}
+.hero-play-btn:hover {
+  transform: scale(1.04) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+  background: #f0f0f0 !important;
+}
+.hero-shuffle-btn {
+  padding: 12px 24px !important;
+  border-radius: 50px !important;
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  backdrop-filter: blur(8px);
+  transition: background 120ms ease, border-color 120ms ease !important;
+}
+.hero-shuffle-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.5) !important;
+}
+
+/* ── Home hero ────────────────────────────────────────────── */
+.home-hero {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  align-items: center;
+  padding: 48px 0 40px;
+  position: relative;
+}
+.home-title {
+  font-size: 44px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1.5px !important;
+  line-height: 1.08 !important;
+  color: var(--text-primary) !important;
+  margin-bottom: 16px !important;
+}
+.home-title span { color: var(--accent) !important; }
+.home-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 28px;
+  max-width: 420px;
+}
+
+/* ── Home hero card ───────────────────────────────────────── */
+.home-hero-card {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
+.home-hero-card::before { display: none !important; }
+
+/* ── Section titles ───────────────────────────────────────── */
+.yami-section-title {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.5px !important;
+  color: var(--text-primary) !important;
+  margin-bottom: 20px !important;
+}
+
+/* ── Now playing panel — premium glass panel ──────────────── */
+.now-playing-panel {
+  background: rgba(12,12,14,0.96) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  border-left: 1px solid rgba(255,255,255,0.06) !important;
+  box-shadow: -4px 0 40px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Now playing art — large with depth ───────────────────── */
+.np-art {
+  border-radius: 10px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06) !important;
+  transition: transform 300ms ease !important;
+}
+.np-art:hover { transform: scale(1.02) !important; }
+
+/* ── Lyric lines — typographic, cinematic ─────────────────── */
+.lyrics-line {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: rgba(255,255,255,0.25) !important;
+  line-height: 1.7 !important;
+  transition: color 250ms ease, font-size 250ms ease, opacity 250ms ease !important;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 12px !important;
+}
+.lyrics-line:hover { color: rgba(255,255,255,0.45) !important; }
+.lyrics-line.active {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  background: rgba(255,87,51,0.06) !important;
+  letter-spacing: -0.3px;
+}
+
+/* ── Stats cards — elevated ───────────────────────────────── */
+.stat-card {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 14px !important;
+  transition: transform 120ms ease, box-shadow 120ms ease !important;
+}
+.stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Search input — large, prominent ─────────────────────── */
+.search-input {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+}
+.search-input:focus {
+  border-color: rgba(255,87,51,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(255,87,51,0.08) !important;
+  background: var(--surface-elevated) !important;
+}
+
+/* ── Toast — elevated pill ────────────────────────────────── */
+.toast-wrap {
+  background: rgba(30,30,38,0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 50px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  padding: 10px 18px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* ── Settings groups — refined ────────────────────────────── */
+.settings-group {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  margin-bottom: 16px !important;
+}
+.settings-group-title {
+  padding: 14px 20px 10px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: var(--text-muted) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+.settings-row {
+  padding: 14px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid rgba(255,255,255,0.04) !important;
+  transition: background 80ms ease !important;
+}
+.settings-row:hover { background: rgba(255,255,255,0.02) !important; }
+
+/* ── Drag handle ──────────────────────────────────────────── */
+.drag-handle { color: var(--text-muted) !important; }
+.drag-handle:hover { color: var(--text-secondary) !important; }
+
+/* ── Spotify/import page card ─────────────────────────────── */
+.spotify-page .import-card,
+.spotify-connect-card {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3) !important;
+}
+
+/* ── Sidebar now-playing card ─────────────────────────────── */
+.sidebar-nowplaying {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 10px !important;
+  margin: 8px !important;
+}
+
+/* ── Active mode buttons (shuffle/repeat/radio) ───────────── */
+.player-btn.active-mode,
+.player-icon-btn.active-mode {
+  color: var(--accent) !important;
+}
+.player-btn.active-mode::after {
+  content: '';
+  display: block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 2px auto 0;
+}
+
+/* ── Genre cards ──────────────────────────────────────────── */
+.genre-card {
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  transition: transform 120ms ease, box-shadow 120ms ease !important;
+  cursor: pointer;
+}
+.genre-card:hover {
+  transform: scale(1.03) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Artist & album cards ─────────────────────────────────── */
+.artist-card, .album-card {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease !important;
+}
+.artist-card:hover, .album-card:hover {
+  background: var(--surface-hover) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4) !important;
+  border-color: rgba(255,87,51,0.15) !important;
+}
+.artist-card-avatar {
+  background: linear-gradient(135deg, rgba(255,87,51,0.3), rgba(255,45,85,0.3)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* ── User setup screen ────────────────────────────────────── */
+.yami-setup-bg {
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255,87,51,0.12) 0%, transparent 70%),
+    var(--bg-primary) !important;
+}

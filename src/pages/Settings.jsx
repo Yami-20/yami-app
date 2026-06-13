@@ -6,12 +6,11 @@ const VERSION = require('../../package.json').version;
 
 export default function Settings() {
   const { volume, setVolume } = useYami();
-  const { profile } = useUser();
+  const { profile, resetProfile } = useUser();
 
   const handleResetProfile = () => {
     if (window.confirm('Reset your profile? You\'ll be asked to enter your name again.')) {
-      localStorage.removeItem('yami_user_profile');
-      window.location.reload();
+      resetProfile(); // clears state + storage atomically — no reload needed
     }
   };
 

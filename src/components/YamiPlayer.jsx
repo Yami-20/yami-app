@@ -36,9 +36,10 @@ export default function YamiPlayer() {
   const [streamUrl, setStreamUrl]       = useState(null);
   const [loading, setLoading]           = useState(false);
   const [offline, setOffline]           = useState(false);
-  const prefetchCache = useRef({});  // trackId → { url, ts }
-  const prefetchDone  = useRef({});  // trackId → bool
-  const abortRef      = useRef(null);
+  const prefetchCache  = useRef({});  // trackId → { url, ts }
+  const prefetchDone   = useRef({});  // trackId → bool
+  const abortRef       = useRef(null);
+  const isNewTrackLoad = useRef(false); // true when streamUrl just loaded for a new track
   const liked = currentTrack ? isLiked(currentTrack.trackId) : false;
 
   // ── Backend health monitor ────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export default function YamiPlayer() {
 
     // Use prefetch cache if fresh
     if (isFresh(currentTrack.trackId)) {
+      isNewTrackLoad.current = true;
       setStreamUrl(prefetchCache.current[currentTrack.trackId].url);
       setLoading(false);
       return;
@@ -113,6 +115,7 @@ export default function YamiPlayer() {
     fetchStreamUrl(currentTrack.trackName, currentTrack.artistName, controller.signal)
       .then(url => {
         prefetchCache.current[currentTrack.trackId] = { url, ts: Date.now() };
+        isNewTrackLoad.current = true;
         setStreamUrl(url);
         setLoading(false);
       })
@@ -184,19 +187,22 @@ export default function YamiPlayer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Math.floor(progress)]);
 
-  // ── Apply stream URL — always start playback when URL lands ─────────────
+  // ── Apply stream URL ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!ref.current || !streamUrl) return;
     ref.current.src = streamUrl;
     ref.current.volume = muted ? 0 : volume;
-    // Always call play() — isPlaying is already true from _playTrackNoQueue
-    ref.current.play().catch(() => {});
+    // Only auto-play if this URL is for a new track (not a TTL re-fetch)
+    if (isNewTrackLoad.current) {
+      isNewTrackLoad.current = false;
+      ref.current.play().catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamUrl]);
 
+  // ── Toggle play / pause ───────────────────────────────────────────────────
   useEffect(() => {
     if (!ref.current) return;
-    // Guard: don't call play/pause if src is not yet set
     const src = ref.current.src;
     if (!src || src === window.location.href) return;
     if (isPlaying) ref.current.play().catch(() => {});
