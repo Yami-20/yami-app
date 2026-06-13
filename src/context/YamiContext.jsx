@@ -138,6 +138,7 @@ export function YamiProvider({ children }) {
   const suggestionsRef  = useRef([]);
   const historyRef      = useRef([]);
   const likedRef        = useRef([]);
+  const progressRef     = useRef(0); // always-fresh progress for playPrev
 
   // Session-wide played set — never replay a song heard this session
   const playedIds = useRef(new Set());
@@ -147,6 +148,7 @@ export function YamiProvider({ children }) {
   const fetchAbortRef = useRef(null);
 
   useEffect(() => { queueRef.current        = queue;       }, [queue]);
+  useEffect(() => { progressRef.current     = progress;    }, [progress]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
   useEffect(() => { suggestionsRef.current  = suggestions;  }, [suggestions]);
   useEffect(() => { historyRef.current      = history;      }, [history]);
@@ -322,22 +324,43 @@ export function YamiProvider({ children }) {
       return;
     }
 
+    // Suggestions not loaded yet — wait and retry once
+    if (fetchingRef.current) {
+      const waitAndRetry = () => {
+        if (!fetchingRef.current) {
+          const retryPick = pickNextSuggestion();
+          if (retryPick) { _playTrackNoQueue(retryPick); return; }
+        }
+        setIsPlaying(false);
+      };
+      setTimeout(waitAndRetry, 1500);
+      return;
+    }
     setIsPlaying(false);
   }, [shuffle, repeat, _playTrackNoQueue, pickNextSuggestion, fetchSuggestions]);
 
-  const skipNext = useCallback(() => playNext(true), [playNext]);
+  const skipNext = useCallback(() => {
+    // If nothing is playing at all, do nothing
+    if (!currentTrackRef.current) return;
+    playNext(true);
+  }, [playNext]);
 
   const playPrev = useCallback(() => {
     const q       = queueRef.current;
     const current = currentTrackRef.current;
-    if (progress > 3) {
+    // Use ref — never stale, unlike the closed-over progress state value
+    if (progressRef.current > 3) {
       if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); }
       return;
     }
     const idx  = q.findIndex(t => t.trackId === current?.trackId);
     const prev = idx > 0 ? q[idx - 1] : null;
     if (prev) _playTrackNoQueue(prev);
-  }, [progress, _playTrackNoQueue]);
+    // If no previous track in queue, just restart from beginning
+    else if (current) {
+      if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); }
+    }
+  }, [_playTrackNoQueue]); // no progress dep — uses progressRef
 
   // ── Queue management ──────────────────────────────────────────────────────
   const addToQueue = useCallback((track) => {
