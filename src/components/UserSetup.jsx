@@ -38,7 +38,7 @@ export default function UserSetup() {
           <img src={logoSrc} alt="Yami" style={{ width: 32, height: 32, borderRadius: 8 }} />
           <span style={{
             fontSize: 18, fontWeight: 800, letterSpacing: 4,
-            background: 'linear-gradient(135deg, #fff 30%, #ff5733 100%)',
+            background: 'linear-gradient(135deg, #00c9a7 0%, #0099ff 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>YAMI</span>
         </div>
@@ -47,7 +47,7 @@ export default function UserSetup() {
         <div style={{
           width: 80, height: 80, borderRadius: '50%',
           background: name.trim()
-            ? 'linear-gradient(135deg, #ff5733, #ff2d55)'
+            ? 'linear-gradient(135deg, #00c9a7, #0099ff)'
             : 'rgba(255,255,255,0.06)',
           border: '2px solid rgba(255,255,255,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -110,17 +110,17 @@ export default function UserSetup() {
           style={{
             width: '100%', padding: '14px',
             background: name.trim()
-              ? 'linear-gradient(135deg, #ff5733, #ff2d55)'
+              ? 'linear-gradient(135deg, #00c9a7, #0099ff)'
               : 'rgba(255,255,255,0.06)',
             border: name.trim() ? 'none' : '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12,
-            color: name.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+            color: name.trim() ? '#000' : 'rgba(255,255,255,0.3)',
             fontSize: 15, fontWeight: 600,
             cursor: name.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             fontFamily: 'var(--font-body)',
             transition: 'all 150ms ease',
-            boxShadow: name.trim() ? '0 4px 20px rgba(255,87,51,0.3)' : 'none',
+            boxShadow: name.trim() ? '0 4px 20px rgba(0,201,167,0.3)' : 'none',
           }}
         >
           <RiCheckLine /> Get Started

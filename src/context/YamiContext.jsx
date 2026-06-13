@@ -8,81 +8,56 @@ import {
 const YamiContext = createContext();
 
 // ─── iTunes resolution ────────────────────────────────────────────────────────
-// Resolves a Last.fm entry to an iTunes track, scoring by title+artist match quality.
 async function resolveToItunes(entry) {
   try {
     const results = await itunesSearch({ term: entry.query, limit: 8 });
     if (!results.length) return null;
-
     const targetName   = entry.name.toLowerCase().trim();
     const targetArtist = entry.artist.toLowerCase().trim();
-
-    // Score each result — prefer exact title + artist match, penalize live/karaoke/cover
-    const BAD_KEYWORDS = /\b(live|karaoke|tribute|cover|instrumental|remix|version|remaster)\b/i;
-
+    const BAD = /\b(live|karaoke|tribute|cover|instrumental|remix|version|remaster)\b/i;
     const scored = results.map(r => {
-      const rName   = r.trackName.toLowerCase().trim();
+      const rName = r.trackName.toLowerCase().trim();
       const rArtist = r.artistName.toLowerCase().trim();
       let score = 0;
-
-      // Title match
-      if (rName === targetName)                          score += 40;
-      else if (rName.includes(targetName))               score += 20;
-      else if (targetName.includes(rName))               score += 15;
-
-      // Artist match
-      if (rArtist === targetArtist)                      score += 30;
-      else if (rArtist.includes(targetArtist))           score += 15;
-      else if (targetArtist.includes(rArtist))           score += 10;
-
-      // Penalize bad results
-      if (BAD_KEYWORDS.test(r.trackName))                score -= 20;
-      if (!r.previewUrl)                                 score -= 5;
-
+      if (rName === targetName)             score += 40;
+      else if (rName.includes(targetName))  score += 20;
+      else if (targetName.includes(rName))  score += 15;
+      if (rArtist === targetArtist)         score += 30;
+      else if (rArtist.includes(targetArtist)) score += 15;
+      else if (targetArtist.includes(rArtist)) score += 10;
+      if (BAD.test(r.trackName)) score -= 20;
+      if (!r.previewUrl)         score -= 5;
       return { track: r, score };
     });
-
     scored.sort((a, b) => b.score - a.score);
-    // Only return if we have at least a weak match
     return scored[0].score > 0 ? scored[0].track : null;
   } catch { return null; }
 }
 
-// ─── Suggestion pool builder ─────────────────────────────────────────────────
-// Builds a diverse, scored pool from multiple Last.fm signals.
-// seenArtists: Set of artist names to deprioritize (not exclude)
+// ─── Suggestion pool builder ──────────────────────────────────────────────────
 async function buildSuggestionPool(track, seenArtists = new Set()) {
   const artist = track.artistName || '';
   const name   = track.trackName  || '';
   const genre  = track.primaryGenreName || '';
-
-  // Fire all sources in parallel, including track tags for richer seeding
   const [similar, artistPool, genrePool, tags] = await Promise.all([
     getSimilarTracks(artist, name, 50),
     getSimilarArtistsTracks(artist, 6),
     getSimilarByGenre(genre, 20),
     getTrackTags(artist, name),
   ]);
-
-  // Fetch tag-based tracks for up to 2 mood/genre tags in parallel
   const tagPools = tags.length
     ? await Promise.all(tags.slice(0, 2).map(tag => getTagTopTracks(tag, 15).catch(() => [])))
     : [];
   const tagTracks = tagPools.flat().map(t => ({ ...t, match: t.match * 0.9 }));
-
-  // Merge all sources, dedupe by "artist|||name" key, keep highest score
   const scoreMap = new Map();
   [...similar, ...artistPool, ...genrePool, ...tagTracks].forEach(entry => {
     if (!entry.artist || !entry.name) return;
     const key = `${entry.artist.toLowerCase()}|||${entry.name.toLowerCase()}`;
-    if (!scoreMap.has(key) || scoreMap.get(key).match < entry.match) {
+    if (!scoreMap.has(key) || scoreMap.get(key).match < entry.match)
       scoreMap.set(key, entry);
-    }
   });
-
-  // Sort: prefer entries from artists not already heard recently
   const candidates = [...scoreMap.values()]
-    .filter(e => e.artist.toLowerCase() !== artist.toLowerCase()) // exclude source artist exact match
+    .filter(e => e.artist.toLowerCase() !== artist.toLowerCase())
     .sort((a, b) => {
       const aFresh = !seenArtists.has(a.artist.toLowerCase()) ? 1 : 0;
       const bFresh = !seenArtists.has(b.artist.toLowerCase()) ? 1 : 0;
@@ -90,11 +65,8 @@ async function buildSuggestionPool(track, seenArtists = new Set()) {
       return b.match - a.match;
     })
     .slice(0, 80);
-
-  // Resolve to iTunes in parallel batches of 10, stop when 35 good results found
   const resolved = [];
   const seen = new Set([track.trackId]);
-
   for (let i = 0; i < candidates.length; i += 10) {
     const batch = candidates.slice(i, i + 10);
     const results = await Promise.all(batch.map(resolveToItunes));
@@ -105,268 +77,287 @@ async function buildSuggestionPool(track, seenArtists = new Set()) {
     });
     if (resolved.length >= 35) break;
   }
-
-  return resolved
-    .sort((a, b) => b.match - a.match)
-    .map(({ track: t }) => t);
+  return resolved.sort((a, b) => b.match - a.match).map(({ track: t }) => t);
 }
 
-// ─── Context ─────────────────────────────────────────────────────────────────
+// ─── Interleave by artist ─────────────────────────────────────────────────────
+function interleave(pool) {
+  const result = [];
+  const buckets = new Map();
+  pool.forEach(t => {
+    const a = t.artistName.toLowerCase();
+    if (!buckets.has(a)) buckets.set(a, []);
+    buckets.get(a).push(t);
+  });
+  const bArr = [...buckets.values()];
+  let i = 0;
+  while (result.length < pool.length) {
+    const b = bArr[i % bArr.length];
+    if (b?.length) result.push(b.shift());
+    i++;
+    if (bArr.every(b => !b.length)) break;
+  }
+  return result;
+}
+
+// ─── Context ──────────────────────────────────────────────────────────────────
 export function YamiProvider({ children }) {
-  const [currentTrack,   setCurrentTrack]   = useState(null);
-  const [isPlaying,      setIsPlaying]      = useState(false);
-  const [queue,          setQueue]          = useState([]);
-  const [volume, setVolume] = useState(() => { try { const v = localStorage.getItem('yami_volume'); return v ? parseFloat(v) : 0.8; } catch { return 0.8; } });
-  const [muted, setMuted] = useState(() => { try { return localStorage.getItem('yami_muted') === 'true'; } catch { return false; } });
-  const [progress,       setProgress]       = useState(0);
-  const [duration,       setDuration]       = useState(0);
-  const [shuffle,        setShuffle]        = useState(false);
-  const [repeat,         setRepeat]         = useState('off');
-  const [liked,          setLiked]          = useState([]);
-  const [history,        setHistory]        = useState([]);
-  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
-  const [toast,          setToast]          = useState(null);
-  const [radioMode,      setRadioMode]      = useState(false);
-  const [suggestions,    setSuggestions]    = useState([]);
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [currentTrack,     setCurrentTrack]     = useState(null);
+  const [isPlaying,        setIsPlaying]        = useState(false);
+  const [queue,            setQueueState]       = useState([]);
+  const [volume,           setVolume]           = useState(() => { try { const v = localStorage.getItem('yami_volume'); return v ? parseFloat(v) : 0.8; } catch { return 0.8; } });
+  const [muted,            setMuted]            = useState(() => { try { return localStorage.getItem('yami_muted') === 'true'; } catch { return false; } });
+  const [progress,         setProgress]         = useState(0);
+  const [duration,         setDuration]         = useState(0);
+  const [shuffle,          setShuffle]          = useState(false);
+  const [repeat,           setRepeat]           = useState('off');
+  const [liked,            setLiked]            = useState([]);
+  const [history,          setHistory]          = useState([]);
+  const [nowPlayingOpen,   setNowPlayingOpen]   = useState(false);
+  const [toast,            setToast]            = useState(null);
+  const [radioMode,        setRadioMode]        = useState(false);
+  const [suggestions,      setSuggestions]      = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const audioRef = useRef(null);
 
-  // Always-fresh refs — callbacks never close over stale state
-  const queueRef        = useRef([]);
-  const currentTrackRef = useRef(null);
-  const suggestionsRef  = useRef([]);
-  const historyRef      = useRef([]);
-  const likedRef        = useRef([]);
-  const progressRef     = useRef(0); // always-fresh progress for playPrev
+  // ── SYNCHRONOUS REFS — always current, never stale ────────────────────────
+  // These are updated immediately (not via useEffect) so callbacks always
+  // read the true current value even if called before React re-renders.
+  const queueRef       = useRef([]);
+  const currentRef     = useRef(null);
+  const suggestionsRef = useRef([]);
+  const historyRef     = useRef([]);
+  const progressRef    = useRef(0);
+  const shuffleRef     = useRef(false);
+  const repeatRef      = useRef('off');
 
-  // Session-wide played set — never replay a song heard this session
-  const playedIds = useRef(new Set());
-  // Background fetch in-flight flag — avoid duplicate concurrent fetches
-  const fetchingRef = useRef(false);
-  // Abort controller for in-flight suggestion fetch
-  const fetchAbortRef = useRef(null);
-
-  useEffect(() => { queueRef.current        = queue;       }, [queue]);
-  useEffect(() => { progressRef.current     = progress;    }, [progress]);
-  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
-  useEffect(() => { suggestionsRef.current  = suggestions;  }, [suggestions]);
-  useEffect(() => { historyRef.current      = history;      }, [history]);
-  useEffect(() => { likedRef.current        = liked;        }, [liked]);
-
-  const showToast = useCallback((msg, type = 'info') => {
-    setToast({ msg, type, id: Date.now() });
-    setTimeout(() => setToast(null), 2400);
+  // Helpers to set state AND ref in one call
+  const setQueue = useCallback((updater) => {
+    setQueueState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      queueRef.current = next;
+      return next;
+    });
   }, []);
 
-  // ── Fetch suggestions ─────────────────────────────────────────────────────
-  // Cancels any in-flight fetch, builds a new pool biased away from recent artists.
+
+  const setShuffleSync = useCallback((val) => {
+    const next = typeof val === 'function' ? val(shuffleRef.current) : val;
+    shuffleRef.current = next;
+    setShuffle(next);
+  }, []);
+
+  const setProgressSync = useCallback((val) => {
+    progressRef.current = val;
+    setProgress(val);
+  }, []);
+
+  // ── Session tracking ──────────────────────────────────────────────────────
+  const playedIds     = useRef(new Set());
+  const fetchingRef   = useRef(false);
+  const fetchAbortRef = useRef(null);
+
+  // ── Suggestions ───────────────────────────────────────────────────────────
   const fetchSuggestions = useCallback(async (track) => {
-    setSuggestionsLoading(true);
     if (!track) return;
+    setSuggestionsLoading(true);
     if (fetchAbortRef.current) fetchAbortRef.current.abort = true;
     const token = { abort: false };
     fetchAbortRef.current = token;
     fetchingRef.current = true;
-
     try {
       const hist = historyRef.current;
-      // Build "seen artists" from history (last 15 played) to diversify suggestions
-      const seenArtists = new Set(
-        hist.slice(0, 15).map(t => t.artistName.toLowerCase())
-      );
-
+      const seenArtists = new Set(hist.slice(0, 15).map(t => t.artistName.toLowerCase()));
       const pool = await buildSuggestionPool(track, seenArtists);
       if (token.abort) return;
-
-      // Filter out anything already played this session or in recent history
       const recentIds = new Set(hist.slice(0, 12).map(t => t.trackId));
-      const fresh = pool.filter(t =>
-        !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId)
-      );
-
-      // Interleave: alternate fresh-artist and any-artist picks for variety
-      const finalPool = interleave(fresh, hist);
-      setSuggestions(finalPool.length >= 5 ? finalPool : pool);
+      const fresh = pool.filter(t => !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId));
+      const final = interleave(fresh);
+      const next = final.length >= 5 ? final : pool;
+      suggestionsRef.current = next;
+      setSuggestions(next);
     } catch {
+      suggestionsRef.current = [];
       setSuggestions([]);
     } finally {
       fetchingRef.current = false;
+      setSuggestionsLoading(false);
     }
   }, []);
 
-  // Interleave suggestions so same artist doesn't cluster together
-  function interleave(pool) {
-    const result = [];
-    const artistBuckets = new Map();
-    pool.forEach(t => {
-      const a = t.artistName.toLowerCase();
-      if (!artistBuckets.has(a)) artistBuckets.set(a, []);
-      artistBuckets.get(a).push(t);
-    });
-    const buckets = [...artistBuckets.values()];
-    let i = 0;
-    while (result.length < pool.length) {
-      const b = buckets[i % buckets.length];
-      if (b && b.length) result.push(b.shift());
-      i++;
-      if (buckets.every(b => !b.length)) break;
-    }
-    return result;
-  }
-
-  // ── Pick next suggestion smartly ─────────────────────────────────────────
+  // ── Pick next suggestion ──────────────────────────────────────────────────
   const pickNextSuggestion = useCallback(() => {
     const suggs = suggestionsRef.current;
     const hist  = historyRef.current;
     if (!suggs.length) return null;
-
     const recentIds     = new Set(hist.slice(0, 12).map(t => t.trackId));
     const recentArtists = new Set(hist.slice(0, 6).map(t => t.artistName));
-
-    // Priority 1: unplayed + not recent artist + not in recent history
-    let pick = suggs.find(t =>
-      !playedIds.current.has(t.trackId) &&
-      !recentIds.has(t.trackId) &&
-      !recentArtists.has(t.artistName)
-    );
-    // Priority 2: unplayed + not in recent history
-    if (!pick) pick = suggs.find(t =>
-      !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId)
-    );
-    // Priority 3: anything unplayed
-    if (!pick) pick = suggs.find(t => !playedIds.current.has(t.trackId));
-
-    // Pool exhausted — clear played set and start fresh
+    let pick =
+      suggs.find(t => !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId) && !recentArtists.has(t.artistName)) ||
+      suggs.find(t => !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId)) ||
+      suggs.find(t => !playedIds.current.has(t.trackId));
     if (!pick) {
       playedIds.current.clear();
-      pick = suggs.find(t => !recentIds.has(t.trackId) && !recentArtists.has(t.artistName))
-          || suggs[0];
+      pick = suggs.find(t => !recentIds.has(t.trackId) && !recentArtists.has(t.artistName)) || suggs[0];
     }
-
     return pick || null;
   }, []);
 
-  // ── Internal: play track (no queue mutation) ──────────────────────────────
-  const _playTrackNoQueue = useCallback((track) => {
-    if (currentTrackRef.current?.trackId === track.trackId) {
+  // ── Core play action (no queue mutation) ──────────────────────────────────
+  const _play = useCallback((track) => {
+    if (!track) return;
+    // Same track — toggle
+    if (currentRef.current?.trackId === track.trackId) {
       setIsPlaying(p => !p);
       return;
     }
     playedIds.current.add(track.trackId);
-    // Batch: set track + clear progress atomically; isPlaying stays true
-    setCurrentTrack(track);
-    setProgress(0);
-    setIsPlaying(true); // explicit true — never assume it's already true
-    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100));
-    fetchSuggestions(track);
-  }, [fetchSuggestions]);
-
-  // ── Public: play track (adds to queue) ───────────────────────────────────
-  const playTrack = useCallback((track) => {
-    if (currentTrackRef.current?.trackId === track.trackId) {
-      setIsPlaying(p => !p);
-      return;
-    }
-    const current = currentTrackRef.current;
-    playedIds.current.add(track.trackId);
+    currentRef.current = track;          // sync ref immediately
     setCurrentTrack(track);
     setIsPlaying(true);
+    progressRef.current = 0;
     setProgress(0);
-    setHistory(h => [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100));
-    setQueue(q => {
-      if (q.find(t => t.trackId === track.trackId)) return q;
-      const idx = q.findIndex(t => t.trackId === current?.trackId);
-      if (idx === -1) return [...q, track];
-      return [...q.slice(0, idx + 1), track, ...q.slice(idx + 1)];
+    setHistory(h => {
+      const next = [track, ...h.filter(t => t.trackId !== track.trackId)].slice(0, 100);
+      historyRef.current = next;
+      return next;
     });
     fetchSuggestions(track);
   }, [fetchSuggestions]);
 
+  // ── Public playTrack (adds to queue) ─────────────────────────────────────
+  const playTrack = useCallback((track) => {
+    if (!track) return;
+    if (currentRef.current?.trackId === track.trackId) {
+      setIsPlaying(p => !p);
+      return;
+    }
+    const current = currentRef.current;
+    _play(track);
+    setQueue(q => {
+      if (q.find(t => t.trackId === track.trackId)) return q;
+      const idx = q.findIndex(t => t.trackId === current?.trackId);
+      return idx === -1 ? [...q, track] : [...q.slice(0, idx + 1), track, ...q.slice(idx + 1)];
+    });
+  }, [_play, setQueue]);
+
   const togglePlay = useCallback(() => {
-    if (currentTrack) setIsPlaying(p => !p);
-  }, [currentTrack]);
+    if (currentRef.current) setIsPlaying(p => !p);
+  }, []);
 
-  // ── Next / Skip ───────────────────────────────────────────────────────────
-  const playNext = useCallback((manual = false) => {
-    const q       = queueRef.current;
-    const current = currentTrackRef.current;
+  // ── skipNext ──────────────────────────────────────────────────────────────
+  const skipNext = useCallback(() => {
+    const current = currentRef.current;
+    if (!current) return;
 
-    if (repeat === 'one' && !manual) {
+    const q = queueRef.current;
+
+    // Shuffle mode — pick random from queue
+    if (shuffleRef.current) {
+      const others = q.filter(t => t.trackId !== current.trackId);
+      if (others.length) { _play(others[Math.floor(Math.random() * others.length)]); return; }
+    }
+
+    // Next in queue
+    const idx  = q.findIndex(t => t.trackId === current.trackId);
+    // idx === -1 means current track not yet in queue — treat as if at end
+    const next = idx >= 0 ? q[idx + 1] : null;
+    if (next) { _play(next); return; }
+
+    // Repeat all — wrap to first
+    if (repeatRef.current === 'all' && q.length) { _play(q[0]); return; }
+
+    // Suggestions
+    const pick = pickNextSuggestion();
+    if (pick) {
+      _play(pick);
+      const remaining = suggestionsRef.current.filter(t => !playedIds.current.has(t.trackId));
+      if (remaining.length < 8 && !fetchingRef.current) fetchSuggestions(pick);
+      return;
+    }
+
+    // Suggestions still loading — retry after delay
+    if (fetchingRef.current) {
+      setTimeout(() => {
+        const retryPick = pickNextSuggestion();
+        if (retryPick) _play(retryPick);
+      }, 2000);
+      return;
+    }
+    setIsPlaying(false);
+  }, [_play, pickNextSuggestion, fetchSuggestions]);
+
+  // ── playNext (auto-advance, called by audio onEnded) ─────────────────────
+  const playNext = useCallback(() => {
+    const current = currentRef.current;
+    if (!current) return;
+
+    // Repeat one
+    if (repeatRef.current === 'one') {
       if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
       return;
     }
 
-    if (shuffle) {
-      const candidates = q.filter(t => t.trackId !== current?.trackId);
-      if (candidates.length) {
-        _playTrackNoQueue(candidates[Math.floor(Math.random() * candidates.length)]);
-        return;
-      }
+    const q = queueRef.current;
+    if (shuffleRef.current) {
+      const others = q.filter(t => t.trackId !== current.trackId);
+      if (others.length) { _play(others[Math.floor(Math.random() * others.length)]); return; }
     }
 
-    // Try the explicit queue first
-    const idx  = q.findIndex(t => t.trackId === current?.trackId);
-    const next = idx >= 0 ? (q[idx + 1] || (repeat === 'all' ? q[0] : null)) : null;
-    if (next) { _playTrackNoQueue(next); return; }
+    const idx  = q.findIndex(t => t.trackId === current.trackId);
+    const next = idx >= 0 ? q[idx + 1] : null;
+    if (next) { _play(next); return; }
+    if (repeatRef.current === 'all' && q.length) { _play(q[0]); return; }
 
-    // Pick from smart suggestion pool
     const pick = pickNextSuggestion();
     if (pick) {
-      if (!manual) setQueue(q => [...q, pick]); // auto-advance: show in queue
-      _playTrackNoQueue(pick);
-
-      // Background-refill suggestions when pool gets thin
+      setQueue(prev => [...prev, pick]);
+      _play(pick);
       const remaining = suggestionsRef.current.filter(t => !playedIds.current.has(t.trackId));
-      if (remaining.length < 8 && !fetchingRef.current) {
-        fetchSuggestions(pick);
-      }
+      if (remaining.length < 8 && !fetchingRef.current) fetchSuggestions(pick);
       return;
     }
-
-    // Suggestions not loaded yet — wait and retry once
     if (fetchingRef.current) {
-      const waitAndRetry = () => {
-        if (!fetchingRef.current) {
-          const retryPick = pickNextSuggestion();
-          if (retryPick) { _playTrackNoQueue(retryPick); return; }
-        }
-        setIsPlaying(false);
-      };
-      setTimeout(waitAndRetry, 1500);
+      setTimeout(() => {
+        const retryPick = pickNextSuggestion();
+        if (retryPick) { setQueue(prev => [...prev, retryPick]); _play(retryPick); }
+      }, 2000);
       return;
     }
     setIsPlaying(false);
-  }, [shuffle, repeat, _playTrackNoQueue, pickNextSuggestion, fetchSuggestions]);
+  }, [_play, pickNextSuggestion, fetchSuggestions, setQueue]);
 
-  const skipNext = useCallback(() => {
-    // If nothing is playing at all, do nothing
-    if (!currentTrackRef.current) return;
-    playNext(true);
-  }, [playNext]);
-
+  // ── playPrev ──────────────────────────────────────────────────────────────
   const playPrev = useCallback(() => {
-    const q       = queueRef.current;
-    const current = currentTrackRef.current;
-    // Use ref — never stale, unlike the closed-over progress state value
+    const current = currentRef.current;
+    if (!current) return;
+
+    // If more than 3s in — restart current track
     if (progressRef.current > 3) {
-      if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); }
+      if (audioRef.current) { audioRef.current.currentTime = 0; }
+      progressRef.current = 0;
+      setProgress(0);
       return;
     }
-    const idx  = q.findIndex(t => t.trackId === current?.trackId);
+
+    const q   = queueRef.current;
+    const idx = q.findIndex(t => t.trackId === current.trackId);
     const prev = idx > 0 ? q[idx - 1] : null;
-    if (prev) _playTrackNoQueue(prev);
-    // If no previous track in queue, just restart from beginning
-    else if (current) {
-      if (audioRef.current) { audioRef.current.currentTime = 0; setProgress(0); }
-    }
-  }, [_playTrackNoQueue]); // no progress dep — uses progressRef
+    if (prev) { _play(prev); return; }
+
+    // No prev in queue — restart
+    if (audioRef.current) { audioRef.current.currentTime = 0; }
+    progressRef.current = 0;
+    setProgress(0);
+  }, [_play]);
 
   // ── Queue management ──────────────────────────────────────────────────────
   const addToQueue = useCallback((track) => {
     setQueue(q => q.find(t => t.trackId === track.trackId) ? q : [...q, track]);
     showToast(`Added "${track.trackName}" to queue`);
-  }, [showToast]);
+  }, [setQueue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addManyToQueue = useCallback((tracks) => {
     setQueue(q => {
@@ -374,13 +365,18 @@ export function YamiProvider({ children }) {
       return [...q, ...tracks.filter(t => !existing.has(t.trackId))];
     });
     showToast(`Added ${tracks.length} songs to queue`);
-  }, [showToast]);
+  }, [setQueue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeFromQueue = useCallback((trackId) => {
     setQueue(q => q.filter(t => t.trackId !== trackId));
-  }, []);
+  }, [setQueue]);
 
   // ── Likes ─────────────────────────────────────────────────────────────────
+  const showToast = useCallback((msg, type = 'info') => {
+    setToast({ msg, type, id: Date.now() });
+    setTimeout(() => setToast(null), 2400);
+  }, []);
+
   const toggleLike = useCallback((track) => {
     setLiked(l => {
       const has = l.find(t => t.trackId === track.trackId);
@@ -392,8 +388,13 @@ export function YamiProvider({ children }) {
   const isLiked = useCallback((trackId) => liked.some(t => t.trackId === trackId), [liked]);
 
   // ── Misc ──────────────────────────────────────────────────────────────────
-  const cycleRepeat = useCallback(() =>
-    setRepeat(r => r === 'off' ? 'all' : r === 'all' ? 'one' : 'off'), []);
+  const cycleRepeat = useCallback(() => {
+    setRepeat(r => {
+      const next = r === 'off' ? 'all' : r === 'all' ? 'one' : 'off';
+      repeatRef.current = next;
+      return next;
+    });
+  }, []);
 
   const toggleRadio = useCallback(() => {
     setRadioMode(r => { showToast(!r ? 'Radio mode on' : 'Radio mode off', 'info'); return !r; });
@@ -410,31 +411,33 @@ export function YamiProvider({ children }) {
       const l = localStorage.getItem('yami_liked');
       const h = localStorage.getItem('yami_history');
       if (l) setLiked(JSON.parse(l));
-      if (h) setHistory(JSON.parse(h));
+      if (h) {
+        const parsed = JSON.parse(h);
+        setHistory(parsed);
+        historyRef.current = parsed;
+        parsed.slice(0, 30).forEach(t => playedIds.current.add(t.trackId));
+      }
     } catch {}
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { try { localStorage.setItem('yami_liked',   JSON.stringify(liked));   } catch {} }, [liked]);
   useEffect(() => { try { localStorage.setItem('yami_history', JSON.stringify(history)); } catch {} }, [history]);
-  useEffect(() => { try { localStorage.setItem('yami_volume', String(volume)); } catch {} }, [volume]);
-  useEffect(() => { try { localStorage.setItem('yami_muted',  String(muted));  } catch {} }, [muted]);
-
-  // ── Seed played set from history on load so we don't replay old songs ──────
-  useEffect(() => {
-    if (history.length > 0) {
-      history.slice(0, 30).forEach(t => playedIds.current.add(t.trackId));
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { try { localStorage.setItem('yami_volume',  String(volume));           } catch {} }, [volume]);
+  useEffect(() => { try { localStorage.setItem('yami_muted',   String(muted));            } catch {} }, [muted]);
 
   return (
     <YamiContext.Provider value={{
       currentTrack, isPlaying, queue, volume, muted, progress, duration,
       shuffle, repeat, liked, history, nowPlayingOpen, toast,
       radioMode, suggestions, suggestionsLoading,
-      audioRef, playTrack, togglePlay, playNext, skipNext, playPrev,
-      addToQueue, addManyToQueue, removeFromQueue, setQueue, toggleLike, isLiked,
-      setShuffle, cycleRepeat, setVolume, setMuted,
-      setProgress, setDuration, setNowPlayingOpen, formatTime, showToast,
+      audioRef,
+      playTrack, togglePlay, playNext, skipNext, playPrev,
+      addToQueue, addManyToQueue, removeFromQueue, setQueue,
+      toggleLike, isLiked,
+      setShuffle: setShuffleSync,
+      cycleRepeat, setVolume, setMuted,
+      setProgress: setProgressSync, setDuration,
+      setNowPlayingOpen, formatTime, showToast,
       toggleRadio, fetchSuggestions,
     }}>
       {children}
@@ -443,4 +446,3 @@ export function YamiProvider({ children }) {
 }
 
 export const useYami = () => useContext(YamiContext);
-

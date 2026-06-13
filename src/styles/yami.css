@@ -5,47 +5,52 @@
    ══════════════════════════════════════════════════════════ */
 
 :root {
-  --bg-primary:       #0a0a0a;
-  --bg-secondary:     #111111;
-  --surface:          #161616;
-  --surface-elevated: #1c1c1c;
-  --surface-hover:    #222222;
-  --surface-active:   #282828;
+  /* ── Backgrounds — deep slate, not warm-tinted ─── */
+  --bg-primary:       #0d0d12;
+  --bg-secondary:     #121218;
+  --surface:          #1a1a24;
+  --surface-elevated: #22222f;
+  --surface-hover:    #2a2a3a;
+  --surface-active:   #313144;
 
-  /* Single accent — warm ember */
-  --accent:           #fa5c3a;
-  --accent-primary:   #fa5c3a;
-  --accent-secondary: #e8441f;
-  --accent-hover:     #ff6e4e;
-  --accent-grad:      linear-gradient(135deg, #fa5c3a, #e8441f);
-  --accent-2:         #fa5c3a;
-  --accent-dim:       rgba(250,92,58,0.10);
-  --accent-glow:      rgba(250,92,58,0.18);
+  /* ── Accent — electric teal/cyan, premium feel ─── */
+  --accent:           #00c9a7;
+  --accent-primary:   #00c9a7;
+  --accent-secondary: #00a88c;
+  --accent-hover:     #00ddb8;
+  --accent-grad:      linear-gradient(135deg, #00c9a7 0%, #0099ff 100%);
+  --accent-dim:       rgba(0,201,167,0.10);
+  --accent-glow:      rgba(0,201,167,0.20);
+  --accent-2:         #0099ff;
 
   /* Legacy aliases */
-  --bg:           var(--bg-primary);
-  --card:         var(--surface);
-  --card-hover:   var(--surface-hover);
-  --card-active:  var(--surface-active);
-  --border-s:     #2a2a2a;
+  --bg:         var(--bg-primary);
+  --card:       var(--surface);
+  --card-hover: var(--surface-hover);
+  --border-s:   #2a2a3a;
 
-  --text-primary:   #ffffff;
-  --text-secondary: #a7a7a7;
-  --text-muted:     #666666;
+  /* ── Text — cool white hierarchy ─────────────── */
+  --text-primary:   #eeeef5;
+  --text-secondary: #8888aa;
+  --text-muted:     #55556a;
   --text:           var(--text-primary);
   --muted:          var(--text-muted);
   --muted-light:    var(--text-secondary);
 
-  --border: rgba(255,255,255,0.07);
+  /* ── Border ────────────────────────────────────── */
+  --border: rgba(255,255,255,0.06);
 
-  --sidebar-w:  240px;
-  --player-h:   88px;
-  --r:          6px;
+  /* ── Layout ─────────────────────────────────────── */
+  --sidebar-w: 240px;
+  --player-h:  88px;
+  --r:         6px;
 
+  /* ── Typography ─────────────────────────────────── */
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'DM Mono', monospace;
 
+  /* ── Motion ─────────────────────────────────────── */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --duration:    120ms;
 }
@@ -392,7 +397,7 @@ body::before {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(250,92,58,0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0,201,167,0.30), transparent);
 }
 
 .home-hero-card:hover {
@@ -510,7 +515,7 @@ body::before {
 .track-row:hover { background: rgba(255,255,255,0.04); }
 
 .track-row.playing {
-  background: rgba(250,92,58,0.07);
+  background: rgba(0,201,167,0.06);
 }
 
 .track-row.playing td:first-child {
@@ -708,8 +713,8 @@ body::before {
 }
 
 .search-input:focus {
-  border-color: rgba(250,92,58,0.35);
-  box-shadow: 0 0 0 3px rgba(250,92,58,0.06);
+  border-color: rgba(0,201,167,0.28);
+  box-shadow: 0 0 0 3px rgba(0,201,167,0.05);
 }
 
 .search-input::placeholder { color: var(--text-muted); }
@@ -1352,7 +1357,7 @@ input[type='range']::-moz-range-thumb {
   transition: border-color var(--duration) ease;
 }
 
-.settings-select:focus { border-color: rgba(199,112,240,0.4); }
+.settings-select:focus { border-color: rgba(0,201,167,0.30); }
 
 /* ── Toggle ────────────────────────────────────────────── */
 .toggle-btn {
@@ -1521,7 +1526,7 @@ input[type='range']::-moz-range-thumb {
 
 .spotify-login-btn:hover:not(:disabled) {
   transform: scale(1.03);
-  box-shadow: 0 8px 32px rgba(199,112,240,0.4);
+  box-shadow: 0 8px 32px rgba(0,201,167,0.30);
 }
 
 .spotify-login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
@@ -1800,7 +1805,7 @@ input[type='range']::-moz-range-thumb {
   transition: border-color 0.2s ease;
 }
 
-.import-input-wrap:focus-within { border-color: rgba(199,112,240,0.45); }
+.import-input-wrap:focus-within { border-color: rgba(0,201,167,0.35); }
 .import-link-icon { font-size: 16px; color: var(--text-muted); flex-shrink: 0; }
 
 .import-url-input {
@@ -1848,7 +1853,7 @@ input[type='range']::-moz-range-thumb {
 .import-progress-bar {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  background: linear-gradient(90deg, rgba(199,112,240,0.15), rgba(139,92,246,0.15));
+  background: linear-gradient(90deg, rgba(0,201,167,0.12), rgba(139,92,246,0.15));
   transition: width 0.3s ease;
 }
 
@@ -1922,9 +1927,7 @@ body {
 }
 
 /* Snappier transitions across the board */
-:root {
-  --duration: 150ms;
-}
+
 
 /* ── Player bar — sleeker with tighter padding ── */
 .yami-player {
@@ -2082,7 +2085,7 @@ input[type=range] {
 .stats-row:last-child { border-bottom: none; }
 .stats-rank { font-size: 12px; color: var(--muted); width: 18px; text-align: center; flex-shrink: 0; }
 .stats-art { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
-.stats-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(250,92,58,0.12); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--accent); flex-shrink: 0; }
+.stats-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(0,201,167,0.10); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--accent); flex-shrink: 0; }
 .stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .stats-info strong { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stats-info span { font-size: 11px; color: var(--muted-light); }
@@ -2097,11 +2100,11 @@ input[type=range] {
 .lyrics-track-info span { font-size: 12px; color: var(--muted-light); }
 .lyrics-mode-toggle { display: flex; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 3px; }
 .lyrics-mode-toggle button { display: flex; align-items: center; gap: 5px; background: none; border: none; border-radius: 7px; color: var(--muted-light); font-size: 12px; font-weight: 600; padding: 6px 12px; cursor: pointer; transition: all .15s; }
-.lyrics-mode-toggle button.active { background: rgba(250,92,58,0.12); color: var(--accent); }
+.lyrics-mode-toggle button.active { background: rgba(0,201,167,0.10); color: var(--accent); }
 .lyrics-body { flex: 1; overflow-y: auto; padding-right: 8px; }
 .lyrics-lines { display: flex; flex-direction: column; gap: 6px; padding: 20px 0 80px; }
 .lyrics-line { font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.2); text-align: center; padding: 6px 20px; border-radius: 10px; transition: all .3s ease; line-height: 1.5; cursor: default; }
-.lyrics-line.active { color: var(--text); font-size: 22px; background: rgba(250,92,58,0.06); }
+.lyrics-line.active { color: var(--text); font-size: 22px; background: rgba(0,201,167,0.05); }
 .lyrics-line.past { color: rgba(255,255,255,0.12); }
 .lyrics-plain { padding: 20px 0 80px; }
 .lyrics-plain-line { font-size: 16px; color: var(--text); line-height: 1.8; text-align: center; }
@@ -2114,7 +2117,7 @@ input[type=range] {
 /* ── Username edit ───────────────────────────────────────────────────────── */
 .sb-username-edit { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
 .sb-username-input { flex: 1; min-width: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: var(--text); font-size: 12px; padding: 4px 8px; outline: none; font-family: var(--font-body); }
-.sb-username-save { background: rgba(250,92,58,0.15); border: none; border-radius: 6px; color: var(--accent); cursor: pointer; padding: 4px 6px; font-size: 13px; display: flex; align-items: center; flex-shrink: 0; }
+.sb-username-save { background: rgba(0,201,167,0.12); border: none; border-radius: 6px; color: var(--accent); cursor: pointer; padding: 4px 6px; font-size: 13px; display: flex; align-items: center; flex-shrink: 0; }
 .sb-edit-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px; opacity: 0; transition: opacity .15s; display: flex; align-items: center; flex-shrink: 0; }
 .sb-user-row:hover .sb-edit-btn { opacity: 1; }
 
@@ -2176,7 +2179,7 @@ input[type=range] {
   color: var(--text-primary);
 }
 .search-tab.active {
-  background: rgba(250,92,58,0.10);
+  background: rgba(0,201,167,0.10);
   border-color: rgba(250,92,58,0.3);
   color: var(--accent);
 }
@@ -2188,7 +2191,7 @@ input[type=range] {
   font-weight: 600;
 }
 .search-tab.active .search-tab-count {
-  background: rgba(250,92,58,0.15);
+  background: rgba(0,201,167,0.12);
 }
 .search-back-btn {
   display: inline-flex;
@@ -2395,46 +2398,18 @@ input[type=range] {
    ══════════════════════════════════════════════════════════ */
 
 /* ── Override root tokens with richer palette ────────────── */
-:root {
-  /* Richer blacks with subtle warmth */
-  --bg-primary:       #0c0c0e;
-  --bg-secondary:     #111116;
-  --surface:          #18181f;
-  --surface-elevated: #1f1f2a;
-  --surface-hover:    #252532;
-  --surface-active:   #2c2c3c;
 
-  /* Ember accent stays but richer */
-  --accent:           #ff5733;
-  --accent-primary:   #ff5733;
-  --accent-secondary: #cc3a1a;
-  --accent-hover:     #ff7a5c;
-  --accent-grad:      linear-gradient(135deg, #ff5733 0%, #ff2d55 100%);
-  --accent-dim:       rgba(255,87,51,0.12);
-  --accent-glow:      rgba(255,87,51,0.22);
-
-  /* Richer text hierarchy */
-  --text-primary:   #f8f8ff;
-  --text-secondary: #9898aa;
-  --text-muted:     #55555f;
-  --text:           var(--text-primary);
-  --muted:          var(--text-muted);
-  --muted-light:    var(--text-secondary);
-
-  /* Borders with subtle blue undertone */
-  --border: rgba(255,255,255,0.06);
-}
 
 /* ── Body — subtle ambient gradient (not heavy, just depth) ─ */
 body {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,87,51,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,201,167,0.05) 0%, transparent 60%),
     var(--bg-primary) !important;
 }
 
 /* ── Sidebar — premium glass effect ─────────────────────── */
 .yami-sidebar {
-  background: rgba(12,12,14,0.92) !important;
+  background: rgba(13,13,18,0.93) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-right: 1px solid rgba(255,255,255,0.05) !important;
@@ -2442,7 +2417,7 @@ body {
 
 /* ── Logo text — gradient brand mark ─────────────────────── */
 .yami-logo-text {
-  background: linear-gradient(135deg, #fff 30%, #ff5733 100%);
+  background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -2460,7 +2435,7 @@ body {
   color: var(--text-primary);
 }
 .yami-nav-link.active {
-  background: rgba(255,87,51,0.12) !important;
+  background: rgba(0,201,167,0.10) !important;
   border-left: 2px solid var(--accent) !important;
   color: var(--text-primary) !important;
   font-weight: 500;
@@ -2468,7 +2443,7 @@ body {
 
 /* ── Player bar — premium frosted glass ───────────────────── */
 .yami-player {
-  background: rgba(12,12,14,0.88) !important;
+  background: rgba(13,13,18,0.90) !important;
   backdrop-filter: blur(32px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(32px) saturate(180%) !important;
   border-top: 1px solid rgba(255,255,255,0.06) !important;
@@ -2483,7 +2458,7 @@ body {
 }
 .player-art:hover {
   transform: scale(1.04) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,87,51,0.3) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,201,167,0.25) !important;
   opacity: 1 !important;
 }
 
@@ -2720,7 +2695,7 @@ body {
 
 /* ── Now playing panel — premium glass panel ──────────────── */
 .now-playing-panel {
-  background: rgba(12,12,14,0.96) !important;
+  background: rgba(13,13,18,0.96) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
   border-left: 1px solid rgba(255,255,255,0.06) !important;
@@ -2751,7 +2726,7 @@ body {
   font-size: 24px !important;
   font-weight: 700 !important;
   color: var(--text-primary) !important;
-  background: rgba(255,87,51,0.06) !important;
+  background: rgba(0,201,167,0.05) !important;
   letter-spacing: -0.3px;
 }
 
@@ -2778,7 +2753,7 @@ body {
   transition: border-color 150ms ease, box-shadow 150ms ease !important;
 }
 .search-input:focus {
-  border-color: rgba(255,87,51,0.4) !important;
+  border-color: rgba(0,201,167,0.30) !important;
   box-shadow: 0 0 0 3px rgba(255,87,51,0.08) !important;
   background: var(--surface-elevated) !important;
 }
@@ -2882,16 +2857,309 @@ body {
   background: var(--surface-hover) !important;
   transform: translateY(-3px) !important;
   box-shadow: 0 12px 32px rgba(0,0,0,0.4) !important;
-  border-color: rgba(255,87,51,0.15) !important;
+  border-color: rgba(0,201,167,0.12) !important;
 }
 .artist-card-avatar {
-  background: linear-gradient(135deg, rgba(255,87,51,0.3), rgba(255,45,85,0.3)) !important;
+  background: linear-gradient(135deg, rgba(0,201,167,0.25), rgba(255,45,85,0.3)) !important;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
 }
 
 /* ── User setup screen ────────────────────────────────────── */
 .yami-setup-bg {
   background:
-    radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255,87,51,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 50% 0%, rgba(0,201,167,0.10) 0%, transparent 70%),
     var(--bg-primary) !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   YAMI v5 — Electric Teal / Deep Slate Theme
+   Premium streaming aesthetic
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Body ambient glow — subtle teal top light ───────────── */
+body {
+  background:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(0,201,167,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 90% 110%, rgba(0,153,255,0.04) 0%, transparent 60%),
+    #0d0d12 !important;
+}
+
+/* ── Sidebar — deep glass ─────────────────────────────────── */
+.yami-sidebar {
+  background: rgba(13,13,18,0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+/* ── Nav active — teal left border ───────────────────────── */
+.yami-nav-link.active {
+  background: rgba(0,201,167,0.08) !important;
+  border-left: 2px solid #00c9a7 !important;
+  color: #eeeef5 !important;
+  font-weight: 500 !important;
+}
+.yami-nav-link:hover {
+  background: rgba(255,255,255,0.04) !important;
+  color: #eeeef5 !important;
+}
+
+/* ── Logo text — teal-to-blue gradient brand ─────────────── */
+.yami-logo h1, .yami-logo-text {
+  background: linear-gradient(135deg, #00c9a7 0%, #0099ff 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* ── Player bar ───────────────────────────────────────────── */
+.yami-player {
+  background: rgba(13,13,18,0.92) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.6), 0 -32px 64px rgba(0,0,0,0.35) !important;
+}
+
+/* ── Play button — white pill, black icon ─────────────────── */
+.player-btn.play {
+  width: 38px !important;
+  height: 38px !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 50% !important;
+  font-size: 16px !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
+  transition: transform 120ms ease, opacity 120ms ease !important;
+}
+.player-btn.play:hover {
+  transform: scale(1.07) !important;
+  opacity: 0.9 !important;
+}
+.player-btn.play:active {
+  transform: scale(0.95) !important;
+}
+
+/* ── Progress — teal fill ─────────────────────────────────── */
+.progress-bar {
+  height: 3px !important;
+  background: rgba(255,255,255,0.08) !important;
+  border-radius: 3px !important;
+  transition: height 120ms ease !important;
+  cursor: pointer;
+}
+.progress-bar:hover { height: 5px !important; }
+.progress-fill {
+  background: rgba(255,255,255,0.6) !important;
+  border-radius: 3px !important;
+}
+.yami-player.is-playing .progress-fill {
+  background: #00c9a7 !important;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -5px; top: 50%;
+  transform: translateY(-50%) scale(0);
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+  pointer-events: none;
+}
+.progress-bar:hover .progress-fill::after {
+  transform: translateY(-50%) scale(1);
+}
+
+/* ── Transport buttons ────────────────────────────────────── */
+.player-btn.transport {
+  font-size: 18px !important;
+  color: var(--text-secondary) !important;
+  transition: color 100ms ease, transform 100ms ease !important;
+}
+.player-btn.transport:hover {
+  color: var(--text-primary) !important;
+  transform: scale(1.1) !important;
+}
+
+/* ── Active mode (shuffle/repeat/radio) ───────────────────── */
+.player-btn.active-mode,
+.player-icon-btn.active-mode {
+  color: #00c9a7 !important;
+  position: relative;
+}
+.player-btn.active-mode::after {
+  content: '';
+  display: block;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #00c9a7;
+  margin: 1px auto 0;
+}
+
+/* ── Playing track highlight ──────────────────────────────── */
+.track-row.playing {
+  background: rgba(0,201,167,0.05) !important;
+}
+.track-row.playing td:first-child {
+  border-left: 2px solid #00c9a7 !important;
+  padding-left: 14px !important;
+}
+.track-row.playing .track-name { color: #00c9a7 !important; }
+
+/* ── Song cards ────────────────────────────────────────────── */
+.song-card {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  border-radius: 10px !important;
+  transition: background 100ms ease, transform 120ms ease, box-shadow 120ms ease !important;
+}
+.song-card:hover {
+  background: var(--surface-hover) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5) !important;
+  border-color: rgba(0,201,167,0.12) !important;
+}
+
+/* ── Search input ──────────────────────────────────────────── */
+.search-input:focus {
+  border-color: rgba(0,201,167,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(0,201,167,0.07) !important;
+  background: var(--surface-elevated) !important;
+}
+
+/* ── Search tab active ─────────────────────────────────────── */
+.search-tab.active {
+  background: rgba(0,201,167,0.08) !important;
+  border-color: rgba(0,201,167,0.3) !important;
+  color: #00c9a7 !important;
+}
+.search-tab.active .search-tab-count {
+  background: rgba(0,201,167,0.15) !important;
+}
+
+/* ── Page hero ─────────────────────────────────────────────── */
+.hero-play-btn {
+  background: #00c9a7 !important;
+  color: #000 !important;
+  font-weight: 700 !important;
+  border-radius: 50px !important;
+  padding: 12px 28px !important;
+  border: none !important;
+  transition: background 120ms ease, transform 120ms ease !important;
+}
+.hero-play-btn:hover {
+  background: #00ddb8 !important;
+  transform: scale(1.03) !important;
+}
+.hero-shuffle-btn {
+  border-color: rgba(255,255,255,0.25) !important;
+  color: #fff !important;
+}
+.hero-shuffle-btn:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.45) !important;
+}
+
+/* ── Stats avatar ──────────────────────────────────────────── */
+.stats-avatar {
+  background: rgba(0,201,167,0.12) !important;
+  color: #00c9a7 !important;
+}
+
+/* ── Lyrics active ─────────────────────────────────────────── */
+.lyrics-line.active {
+  color: #eeeef5 !important;
+  background: rgba(0,201,167,0.06) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Now-playing panel ─────────────────────────────────────── */
+.now-playing-panel {
+  background: rgba(13,13,18,0.97) !important;
+  backdrop-filter: blur(36px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(180%) !important;
+  border-left: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+/* ── Toast ─────────────────────────────────────────────────── */
+.toast-wrap {
+  background: rgba(22,22,34,0.95) !important;
+  border: 1px solid rgba(0,201,167,0.2) !important;
+  border-radius: 50px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Settings ──────────────────────────────────────────────── */
+.settings-group {
+  background: var(--surface) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 12px !important;
+}
+
+/* ── Artist / album cards ──────────────────────────────────── */
+.artist-card:hover, .album-card:hover {
+  border-color: rgba(0,201,167,0.15) !important;
+}
+.artist-card-avatar {
+  background: linear-gradient(135deg, rgba(0,201,167,0.25), rgba(0,153,255,0.2)) !important;
+}
+
+/* ── Keyboard shortcut badge ───────────────────────────────── */
+.kbd-hint {
+  background: var(--surface-elevated) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 5px !important;
+  font-size: 11px !important;
+  padding: 2px 7px !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* ── Home section title ────────────────────────────────────── */
+.yami-section-title {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.3px !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Home hero title accent ────────────────────────────────── */
+.home-title span {
+  background: linear-gradient(135deg, #00c9a7 0%, #0099ff 100%);
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: unset !important;
+}
+
+/* ── User setup screen ─────────────────────────────────────── */
+.yami-setup-bg {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,201,167,0.10) 0%, transparent 65%),
+    #0d0d12 !important;
+}
+
+/* ── Volume slider teal fill ───────────────────────────────── */
+input[type=range] {
+  accent-color: #00c9a7 !important;
+}
+input[type=range]::-webkit-slider-thumb {
+  background: #00c9a7 !important;
+}
+
+/* ── Drag handle ───────────────────────────────────────────── */
+.drag-handle { color: var(--text-muted) !important; }
+.drag-handle:hover { color: #00c9a7 !important; }
+
+/* ── Player art hover ring ─────────────────────────────────── */
+.player-art:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,201,167,0.3) !important;
+  opacity: 1 !important;
+}
+
+/* ── Scrollbar teal ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,201,167,0.18); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,201,167,0.35); }
