@@ -22,10 +22,10 @@ export default function UserSetup() {
     }}>
       {/* Card */}
       <div style={{
-        background: 'rgba(24,24,31,0.92)',
+        background: 'rgba(8,8,8,0.92)',
         backdropFilter: 'blur(40px) saturate(160%)',
         WebkitBackdropFilter: 'blur(40px) saturate(160%)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid rgba(155,89,245,0.15)',
         borderRadius: 20,
         padding: '44px 48px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -38,7 +38,7 @@ export default function UserSetup() {
           <img src={logoSrc} alt="Yami" style={{ width: 32, height: 32, borderRadius: 8 }} />
           <span style={{
             fontSize: 18, fontWeight: 800, letterSpacing: 4,
-            background: 'linear-gradient(135deg, #00c9a7 0%, #0099ff 100%)',
+            background: 'linear-gradient(135deg, #9b59f5 0%, #c084fc 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>YAMI</span>
         </div>
@@ -47,7 +47,7 @@ export default function UserSetup() {
         <div style={{
           width: 80, height: 80, borderRadius: '50%',
           background: name.trim()
-            ? 'linear-gradient(135deg, #00c9a7, #0099ff)'
+            ? 'linear-gradient(135deg, #9b59f5, #c084fc)'
             : 'rgba(255,255,255,0.06)',
           border: '2px solid rgba(255,255,255,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -110,17 +110,17 @@ export default function UserSetup() {
           style={{
             width: '100%', padding: '14px',
             background: name.trim()
-              ? 'linear-gradient(135deg, #00c9a7, #0099ff)'
+              ? 'linear-gradient(135deg, #9b59f5, #c084fc)'
               : 'rgba(255,255,255,0.06)',
             border: name.trim() ? 'none' : '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12,
-            color: name.trim() ? '#000' : 'rgba(255,255,255,0.3)',
+            color: name.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
             fontSize: 15, fontWeight: 600,
             cursor: name.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             fontFamily: 'var(--font-body)',
             transition: 'all 150ms ease',
-            boxShadow: name.trim() ? '0 4px 20px rgba(0,201,167,0.3)' : 'none',
+            boxShadow: name.trim() ? '0 4px 20px rgba(155,89,245,0.4)' : 'none',
           }}
         >
           <RiCheckLine /> Get Started

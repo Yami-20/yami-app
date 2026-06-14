@@ -20,12 +20,12 @@ const GENRES = [
 ];
 
 const COLORS = [
-  ['#be185d','#831843'], ['#6d28d9','#4c1d95'],
-  ['#0e7490','#164e63'], ['#b45309','#78350f'],
-  ['#047857','#064e3b'], ['#1d4ed8','#1e3a8a'],
-  ['#c2410c','#7c2d12'], ['#166534','#14532d'],
-  ['#7c3aed','#4c1d95'], ['#991b1b','#7f1d1d'],
-  ['#b45309','#92400e'], ['#065f46','#064e3b'],
+  ['#7c3aed','#5b21b6'], ['#9b59f5','#7c3aed'],
+  ['#6d28d9','#4c1d95'], ['#8b5cf6','#6d28d9'],
+  ['#a855f7','#7e22ce'], ['#c084fc','#9333ea'],
+  ['#7c3aed','#6d28d9'], ['#9b59f5','#8b5cf6'],
+  ['#6d28d9','#5b21b6'], ['#8b5cf6','#7c3aed'],
+  ['#a855f7','#9333ea'], ['#c084fc','#a855f7'],
 ];
 
 const greeting = () => {
@@ -87,7 +87,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="hero-card-art">
-              <RiMusicFill style={{ color: 'rgba(199,112,240,0.7)' }} />
+              <RiMusicFill style={{ color: 'rgba(155,89,245,0.7)' }} />
             </div>
           )}
           <div className="hero-card-info">

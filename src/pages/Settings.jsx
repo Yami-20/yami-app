@@ -67,8 +67,8 @@ export default function Settings() {
           <button
             onClick={handleResetProfile}
             style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(155,89,245,0.06)',
+              border: '1px solid rgba(155,89,245,0.15)',
               borderRadius: 8, color: 'var(--text-secondary)',
               fontSize: 13, padding: '8px 14px', cursor: 'pointer',
               fontFamily: 'var(--font-body)',

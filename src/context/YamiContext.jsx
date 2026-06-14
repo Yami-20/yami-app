@@ -179,8 +179,8 @@ export function YamiProvider({ children }) {
       suggestionsRef.current = next;
       setSuggestions(next);
     } catch {
-      suggestionsRef.current = [];
-      setSuggestions([]);
+      // Keep existing suggestions on error so skipping still works
+      if (suggestionsRef.current.length === 0) setSuggestions([]);
     } finally {
       fetchingRef.current = false;
       setSuggestionsLoading(false);
@@ -194,14 +194,16 @@ export function YamiProvider({ children }) {
     if (!suggs.length) return null;
     const recentIds     = new Set(hist.slice(0, 12).map(t => t.trackId));
     const recentArtists = new Set(hist.slice(0, 6).map(t => t.artistName));
-    let pick =
+    // Priority cascade — freshest first
+    const pick =
       suggs.find(t => !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId) && !recentArtists.has(t.artistName)) ||
       suggs.find(t => !playedIds.current.has(t.trackId) && !recentIds.has(t.trackId)) ||
-      suggs.find(t => !playedIds.current.has(t.trackId));
-    if (!pick) {
-      playedIds.current.clear();
-      pick = suggs.find(t => !recentIds.has(t.trackId) && !recentArtists.has(t.artistName)) || suggs[0];
-    }
+      suggs.find(t => !playedIds.current.has(t.trackId)) ||
+      // Pool exhausted: reset played tracking and pick from different artist
+      (() => { playedIds.current = new Set(hist.slice(0, 5).map(t => t.trackId)); return null; })() ||
+      suggs.find(t => !recentIds.has(t.trackId) && !recentArtists.has(t.artistName)) ||
+      suggs.find(t => !recentIds.has(t.trackId)) ||
+      suggs[Math.floor(Math.random() * suggs.length)]; // random fallback, not index 0
     return pick || null;
   }, []);
 
@@ -254,39 +256,62 @@ export function YamiProvider({ children }) {
 
     const q = queueRef.current;
 
-    // Shuffle mode — pick random from queue
+    // Shuffle mode
     if (shuffleRef.current) {
       const others = q.filter(t => t.trackId !== current.trackId);
       if (others.length) { _play(others[Math.floor(Math.random() * others.length)]); return; }
     }
 
-    // Next in queue
+    // Next in explicit queue
     const idx  = q.findIndex(t => t.trackId === current.trackId);
-    // idx === -1 means current track not yet in queue — treat as if at end
     const next = idx >= 0 ? q[idx + 1] : null;
     if (next) { _play(next); return; }
 
-    // Repeat all — wrap to first
+    // Repeat all
     if (repeatRef.current === 'all' && q.length) { _play(q[0]); return; }
 
-    // Suggestions
+    // Pick from suggestion pool
     const pick = pickNextSuggestion();
     if (pick) {
       _play(pick);
+      // Refill suggestions seeded from the track we just LEFT (current),
+      // not from pick — gives richer related suggestions
       const remaining = suggestionsRef.current.filter(t => !playedIds.current.has(t.trackId));
-      if (remaining.length < 8 && !fetchingRef.current) fetchSuggestions(pick);
+      if (remaining.length < 10 && !fetchingRef.current) {
+        fetchSuggestions(current); // seed from current, not pick
+      }
       return;
     }
 
-    // Suggestions still loading — retry after delay
+    // No suggestions yet — if fetching, wait and retry
     if (fetchingRef.current) {
-      setTimeout(() => {
-        const retryPick = pickNextSuggestion();
-        if (retryPick) _play(retryPick);
-      }, 2000);
+      const startTime = Date.now();
+      const poll = () => {
+        if (!fetchingRef.current) {
+          const retryPick = pickNextSuggestion();
+          if (retryPick) { _play(retryPick); return; }
+        }
+        if (Date.now() - startTime < 8000) setTimeout(poll, 500);
+        else setIsPlaying(false);
+      };
+      setTimeout(poll, 500);
       return;
     }
-    setIsPlaying(false);
+
+    // Nothing available — trigger fresh fetch from current track and wait
+    if (!fetchingRef.current) {
+      fetchSuggestions(current);
+      const startTime = Date.now();
+      const poll = () => {
+        if (!fetchingRef.current) {
+          const retryPick = pickNextSuggestion();
+          if (retryPick) { _play(retryPick); return; }
+        }
+        if (Date.now() - startTime < 10000) setTimeout(poll, 500);
+        else setIsPlaying(false);
+      };
+      setTimeout(poll, 500);
+    }
   }, [_play, pickNextSuggestion, fetchSuggestions]);
 
   // ── playNext (auto-advance, called by audio onEnded) ─────────────────────
