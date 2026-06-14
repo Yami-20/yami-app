@@ -1,6 +1,6 @@
 {
   "name": "yami",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Yami — a sleek, intelligent music player with radio mode and smart song suggestions.",
   "private": true,
   "main": "electron/main.js",

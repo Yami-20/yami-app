@@ -67,6 +67,16 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { font-size: 16px; }
 
+/* Critical: inputs must always accept text — Electron can override this */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-app-region: no-drag !important;
+}
+input:not([type=range]), textarea {
+  cursor: text !important;
+}
+
 body {
   background:
     radial-gradient(ellipse 60% 40% at 20% 0%, rgba(155,89,245,0.08) 0%, transparent 55%),

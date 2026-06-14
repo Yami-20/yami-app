@@ -108,6 +108,18 @@ function createWindow() {
     ? 'http://localhost:3000'
     : `file://${path.join(__dirname, '..', 'build', 'index.html')}`;
   setTimeout(() => mainWindow.loadURL(url), isDev ? 0 : 1200);
+
+  // Inject CSS after page loads to guarantee inputs are always focusable/typeable
+  // Electron sometimes inherits -webkit-user-select:none from OS-level drag regions
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.insertCSS(`
+      input, textarea, [contenteditable] {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+        -webkit-app-region: no-drag !important;
+      }
+    `);
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 
   // Windows taskbar thumbnail buttons (play/skip controls)
