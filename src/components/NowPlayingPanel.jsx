@@ -8,6 +8,7 @@ export default function NowPlayingPanel() {
     toggleLike, isLiked, addToQueue, playTrack, formatTime,
     setProgress, audioRef,
   } = useYami();
+
   const liked = currentTrack ? isLiked(currentTrack.trackId) : false;
   if (!nowPlayingOpen) return null;
 
@@ -15,7 +16,7 @@ export default function NowPlayingPanel() {
     || currentTrack?.artworkUrl60?.replace('60x60bb', '600x600bb')
     || currentTrack?.artworkUrl60?.replace('60x60', '300x300');
 
-  const handleNpSeek = (e) => {
+  const handleSeek = (e) => {
     if (!duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const t = ((e.clientX - rect.left) / rect.width) * duration;
@@ -23,66 +24,113 @@ export default function NowPlayingPanel() {
     setProgress(t);
   };
 
-  // Exclude currently playing track from "Up next"
-  const upNext = queue.filter(t => t.trackId !== currentTrack?.trackId).slice(0, 6);
+  const upNext = queue.filter(t => t.trackId !== currentTrack?.trackId).slice(0, 8);
+  const pct = duration ? (progress / duration) * 100 : 0;
 
   return (
-    <div className="np-overlay" onClick={() => setNowPlayingOpen(false)}>
-      <div className="np-panel" onClick={e => e.stopPropagation()}>
-        <button className="np-close" onClick={() => setNowPlayingOpen(false)}><RiCloseLine /></button>
+    <>
+      {/* Backdrop */}
+      <div onClick={() => setNowPlayingOpen(false)}
+        style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }} />
 
-        <div className="np-art-wrap">
+      {/* Panel */}
+      <div className="now-playing-panel open">
+        <div className="np-header">
+          <h3>NOW PLAYING</h3>
+          <button className="np-close-btn" onClick={() => setNowPlayingOpen(false)}><RiCloseLine /></button>
+        </div>
+
+        {/* Art */}
+        <div className="np-art-section">
           {art
-            ? <img src={art} alt={currentTrack?.trackName} className="np-art" />
+            ? <img src={art} alt={currentTrack?.trackName} className="np-art" style={{ width: '100%', borderRadius: 12, display: 'block', boxShadow: '0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(155,89,245,0.1)' }} />
             : <div className="np-art-ph"><RiMusicLine /></div>}
         </div>
 
-        <div className="np-info">
-          <div className="np-track">{currentTrack?.trackName ?? 'Nothing playing'}</div>
-          <div className="np-artist">{currentTrack?.artistName ?? '—'}</div>
-          <div className="np-album">{currentTrack?.collectionName ?? ''}</div>
+        {/* Track info */}
+        <div className="np-meta">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="np-track">{currentTrack?.trackName ?? 'Nothing playing'}</div>
+              <div className="np-artist">{currentTrack?.artistName ?? '—'}</div>
+            </div>
+            {currentTrack && (
+              <button
+                onClick={() => toggleLike(currentTrack)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                  color: liked ? 'var(--accent)' : 'var(--text-muted)',
+                  fontSize: 20, flexShrink: 0, transition: 'all .15s ease',
+                  transform: liked ? 'scale(1.1)' : 'scale(1)',
+                }}
+              >
+                {liked ? <RiHeartFill /> : <RiHeartLine />}
+              </button>
+            )}
+          </div>
+
+          {/* Mini progress bar */}
+          <div style={{ marginTop: 14 }}>
+            <div
+              onClick={handleSeek}
+              style={{
+                height: 3, borderRadius: 3, background: 'rgba(255,255,255,0.07)',
+                cursor: 'pointer', position: 'relative', marginBottom: 6,
+              }}
+            >
+              <div style={{
+                height: '100%', borderRadius: 3, width: `${pct}%`,
+                background: 'linear-gradient(90deg, #9b59f5, #c084fc)',
+                transition: 'width .1s linear',
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{formatTime(progress)}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{formatTime(duration)}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="np-actions">
-          {currentTrack && (
-            <button className={`np-like-btn${liked ? ' liked' : ''}`} onClick={() => toggleLike(currentTrack)}>
-              {liked ? <RiHeartFill /> : <RiHeartLine />}
-            </button>
-          )}
-          {currentTrack && (
-            <button className="np-add-btn" onClick={() => addToQueue(currentTrack)}>
+        {/* Add to queue button */}
+        {currentTrack && (
+          <div style={{ padding: '0 24px 12px' }}>
+            <button
+              onClick={() => addToQueue(currentTrack)}
+              style={{
+                width: '100%', padding: '9px 16px',
+                background: 'rgba(155,89,245,0.08)',
+                border: '1px solid rgba(155,89,245,0.18)',
+                borderRadius: 10, color: 'var(--text-secondary)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                fontFamily: 'var(--font-body)', transition: 'all .15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(155,89,245,0.14)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(155,89,245,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
               <RiAddLine /> Add to Queue
             </button>
-          )}
-        </div>
-
-        <div className="np-progress-display">
-          <div className="np-bar-bg" onClick={handleNpSeek}>
-            <div className="np-bar-fill" style={{ width: duration ? `${(progress/duration)*100}%` : '0%' }} />
           </div>
-          <div className="np-times">
-            <span>{formatTime(progress)}</span><span>{formatTime(duration)}</span>
-          </div>
-        </div>
+        )}
 
+        {/* Up next */}
         {upNext.length > 0 && (
-          <div className="np-queue">
-            <p className="np-queue-label">Up next</p>
-            {upNext.map((t, i) => (
-              <div key={t.trackId} className="np-queue-item" onClick={() => playTrack(t)}>
-                <span className="np-q-num">{i + 1}</span>
+          <div className="np-content">
+            <div className="np-queue-label">Up Next</div>
+            {upNext.map((t) => (
+              <div key={t.trackId} className="np-queue-item" onClick={() => { playTrack(t); }}>
                 {t.artworkUrl60
-                  ? <img src={t.artworkUrl60} alt={t.trackName} className="np-q-thumb" />
-                  : <div className="np-q-thumb" style={{background:'var(--card)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center'}}><RiMusicLine style={{color:'var(--muted)',fontSize:14}}/></div>}
-                <div className="np-q-info">
-                  <div className="np-q-name">{t.trackName}</div>
-                  <div className="np-q-artist">{t.artistName}</div>
+                  ? <img src={t.artworkUrl60} alt={t.trackName} className="np-queue-art" />
+                  : <div className="np-queue-art-ph"><RiMusicLine /></div>}
+                <div className="np-queue-info">
+                  <div className="np-queue-track">{t.trackName}</div>
+                  <div className="np-queue-artist">{t.artistName}</div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

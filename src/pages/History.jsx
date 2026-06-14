@@ -6,7 +6,7 @@ export default function History() {
   const { history } = useYami();
   return (
     <main className="yami-main">
-      <div className="page-hero" style={{ background: 'linear-gradient(135deg,#0e7490,#1d4ed8)' }}>
+      <div className="page-hero" style={{ background: 'linear-gradient(135deg,#6d28d9,#9b59f5)' }}>
         <div className="page-hero-icon"><RiHistoryLine /></div>
         <div className="page-hero-content">
           <p className="page-hero-kicker">History</p>

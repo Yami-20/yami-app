@@ -51,15 +51,15 @@ export default function StatsPage() {
       ) : (
         <>
           <div className="stats-cards">
-            <StatCard icon={<RiTimeLine />}   value={stats.minutes} label="minutes listened" color="#a78bfa" />
-            <StatCard icon={<RiMusicLine />}  value={stats.songs}   label="songs streamed"   color="#f472b6" />
-            <StatCard icon={<RiUserLine />}   value={stats.artists} label="artists reached"  color="#34d399" />
-            <StatCard icon={<RiAlbumLine />}  value={stats.albums}  label="albums explored"  color="#fbbf24" />
+            <StatCard icon={<RiTimeLine />}   value={stats.minutes} label="minutes listened" color="#9b59f5" />
+            <StatCard icon={<RiMusicLine />}  value={stats.songs}   label="songs streamed"   color="#c084fc" />
+            <StatCard icon={<RiUserLine />}   value={stats.artists} label="artists reached"  color="#7c3aed" />
+            <StatCard icon={<RiAlbumLine />}  value={stats.albums}  label="albums explored"  color="#a78bfa" />
           </div>
 
           <div className="stats-cols">
             <div className="stats-section">
-              <h3 className="stats-heading">Top Tracks</h3>
+              <h3 className="yami-section-title" style={{ fontSize: '13px', marginBottom: '12px' }}>Top Tracks</h3>
               {stats.topTracks.map((t, i) => (
                 <div key={t.trackId} className="stats-row">
                   <span className="stats-rank">{i + 1}</span>
@@ -73,7 +73,7 @@ export default function StatsPage() {
               ))}
             </div>
             <div className="stats-section">
-              <h3 className="stats-heading">Top Artists</h3>
+              <h3 className="yami-section-title" style={{ fontSize: '13px', marginBottom: '12px' }}>Top Artists</h3>
               {stats.topArtists.map(([artist, count], i) => (
                 <div key={artist} className="stats-row">
                   <span className="stats-rank">{i + 1}</span>

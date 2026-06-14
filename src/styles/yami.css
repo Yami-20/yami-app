@@ -1307,3 +1307,64 @@ input[type=range]::-webkit-slider-thumb {
   .player-right { display: none; }
   .stats-cards { grid-template-columns: 1fr; }
 }
+
+/* ══ SongCard playing bars ══ */
+.playing-bars {
+  display: flex; gap: 2px; align-items: flex-end;
+  height: 14px; width: 18px; margin: 0 auto;
+}
+.playing-bars span {
+  width: 3px; background: var(--accent); border-radius: 2px;
+  animation: barBounce 0.8s ease-in-out infinite;
+}
+.playing-bars span:nth-child(2) { animation-delay: 0.15s; height: 8px; }
+.playing-bars span:nth-child(3) { animation-delay: 0.30s; height: 5px; }
+.playing-bars.paused span { animation-play-state: paused; }
+
+/* ══ Like button active state ══ */
+.track-act-btn.like-btn.liked { color: var(--accent) !important; opacity: 1 !important; }
+.track-act-btn.like-btn { opacity: 0 !important; }
+.track-row:hover .track-act-btn.like-btn { opacity: 1 !important; }
+.track-row:hover .track-act-btn.like-btn.liked,
+.track-act-btn.like-btn.liked { opacity: 1 !important; }
+
+/* ══ Home subtitle missing class ══ */
+.home-sub {
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.6; margin-bottom: 24px; max-width: 400px;
+}
+
+/* ══ NowPlayingPanel backdrop ══ */
+.np-overlay { position: fixed; inset: 0; z-index: 99; }
+
+/* ══ Sidebar missing classes ══ */
+.sb-section { padding: 4px 0 2px; }
+.sb-label {
+  padding: 10px 20px 4px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+.sb-user { display: flex; flex-direction: column; margin-top: auto; }
+.sidebar-kicker {
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--accent); margin-bottom: 8px;
+}
+.sb-edit-btn {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 13px; padding: 2px 4px;
+  border-radius: 4px; transition: color var(--duration) ease;
+  display: flex; align-items: center;
+}
+.sb-edit-btn:hover { color: var(--accent); }
+
+/* ══ Stats heading ══ */
+.stats-heading {
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin-bottom: 12px;
+}
+
+/* ══ StatCard icon color support ══ */
+.stat-card-icon { font-size: 22px; margin-bottom: 10px; }
