@@ -15,7 +15,6 @@ import Liked from './pages/Liked';
 import History from './pages/History';
 import Settings from './pages/Settings';
 import Spotify from './pages/Spotify';
-import SpotifyCallback from './pages/SpotifyCallback';
 import Stats from './pages/Stats';
 import Lyrics from './pages/Lyrics';
 import { useEffect } from 'react';
@@ -52,7 +51,6 @@ function AppInner() {
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/spotify"  element={<Spotify />} />
-            <Route path="/spotify/callback" element={<SpotifyCallback />} />
             <Route path="/stats"   element={<Stats />} />
             <Route path="/lyrics"  element={<Lyrics />} />
           </Routes>

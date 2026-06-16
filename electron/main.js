@@ -1,8 +1,6 @@
-const { app, BrowserWindow, ipcMain, shell, globalShortcut, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, nativeImage } = require('electron');
 const path    = require('path');
 const { spawn } = require('child_process');
-const http    = require('http');
-const { URL } = require('url');
 
 app.commandLine.appendSwitch('no-sandbox');
 
@@ -10,7 +8,6 @@ const isDev = !app.isPackaged;
 
 let mainWindow;
 let backendProcess;
-let callbackServer;
 let backendRestarts = 0;
 const MAX_BACKEND_RESTARTS = 5;
 
@@ -59,28 +56,7 @@ function registerMediaKeys() {
   globalShortcut.register('MediaStop',        () => send('media-stop'));
 }
 
-// ── Spotify callback server ────────────────────────────────────────────────────
-function startCallbackServer() {
-  if (callbackServer) return;
-  callbackServer = http.createServer((req, res) => {
-    const url = new URL(req.url, 'http://127.0.0.1:8888');
-    if (url.pathname === '/spotify/callback') {
-      const code  = url.searchParams.get('code');
-      const state = url.searchParams.get('state');
-      const error = url.searchParams.get('error');
-      if (mainWindow) {
-        mainWindow.webContents.send('spotify-callback', { code, state, error });
-        mainWindow.focus();
-      }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(`<html><body style="background:#080810;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h2 style="color:#1db954">✓ Connected to Spotify</h2><p style="color:#888">You can close this tab and go back to Yami.</p></div></body></html>`);
-    } else { res.writeHead(404); res.end(); }
-  });
-  callbackServer.listen(8888, '127.0.0.1');
-}
-
 // ── IPC handlers ──────────────────────────────────────────────────────────────
-ipcMain.on('spotify-open-auth',  (_, url) => { startCallbackServer(); shell.openExternal(url); });
 ipcMain.on('window-minimize',    () => mainWindow?.minimize());
 ipcMain.on('window-maximize',    () => { if (mainWindow?.isMaximized()) mainWindow.unmaximize(); else mainWindow?.maximize(); });
 ipcMain.on('window-close',       () => mainWindow?.close());
@@ -171,12 +147,10 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
   if (backendProcess) backendProcess.kill();
-  if (callbackServer) callbackServer.close();
   if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
   globalShortcut.unregisterAll();
   if (backendProcess) backendProcess.kill();
-  if (callbackServer) callbackServer.close();
 });

@@ -16,7 +16,7 @@
 
 - **Stream any song** — powered by iTunes + yt-dlp, no sign-in required
 - **Smart radio** — multi-source suggestion engine, never repeats, no same-artist clustering
-- **Spotify import** — connect your account to browse playlists and liked songs
+- **Playlist import** — paste a public Spotify, YouTube Music, or Apple Music playlist link to import it
 - **Synced lyrics**, **listening stats**, **drag-to-reorder queue**
 - **Media key support** — physical ⏮ ⏯ ⏭ keys control playback
 - **Auto-updater** — notified when a new version is ready

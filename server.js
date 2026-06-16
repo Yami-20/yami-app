@@ -109,21 +109,5 @@ app.get('/spotify/scrape', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Spotify token (sp_dc cookie) ──────────────────────────────────────────────
-app.get('/spotify/token', async (req, res) => {
-  const { sp_dc } = req.query;
-  if (!sp_dc) return res.status(400).json({ error: 'sp_dc cookie required' });
-  try {
-    const { status, body } = await httpsGet(
-      'https://open.spotify.com/get_access_token?reason=transport&productType=web_player',
-      { Cookie: `sp_dc=${sp_dc}` }
-    );
-    if (status !== 200) return res.status(status).json({ error: `Spotify rejected the cookie (${status})` });
-    const data = JSON.parse(body);
-    if (data.isAnonymous) return res.status(403).json({ error: 'Cookie is invalid or expired — please log in again' });
-    res.json(data);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, '127.0.0.1', () => console.log(`Yami backend v${version} on :${PORT}`));

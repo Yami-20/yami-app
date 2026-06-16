@@ -6,13 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximize: () => ipcRenderer.send('window-maximize'),
   close:    () => ipcRenderer.send('window-close'),
 
-  // Spotify auth
-  openSpotifyAuth: (url) => ipcRenderer.send('spotify-open-auth', url),
-  onSpotifyCallback: (cb) => {
-    ipcRenderer.on('spotify-callback', (_, data) => cb(data));
-    return () => ipcRenderer.removeAllListeners('spotify-callback');
-  },
-
   // Media keys
   onMediaPlayPause: (cb) => { ipcRenderer.on('media-play-pause', cb); return () => ipcRenderer.removeAllListeners('media-play-pause'); },
   onMediaNext:      (cb) => { ipcRenderer.on('media-next',       cb); return () => ipcRenderer.removeAllListeners('media-next'); },

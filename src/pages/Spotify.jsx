@@ -186,7 +186,7 @@ export default function ImportPage() {
         )}
 
         <button
-          className="spotify-login-btn"
+          className="import-submit-btn"
           onClick={handleImport}
           disabled={!platform || status === 'fetching' || status === 'importing'}
         >
