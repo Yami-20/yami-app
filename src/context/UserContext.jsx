@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const UserContext = createContext();
 const STORAGE_KEY = 'yami_user_profile';
@@ -12,17 +12,15 @@ function generateId() {
   return `user_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function UserProvider({ children }) {
-  // Track whether we're in reset-flow — prevents the profile useEffect
-  // from immediately re-writing localStorage after removeItem
-  const isResetting = useRef(false);
+const EMPTY_PROFILE = () => ({ id: generateId(), username: '', displayName: '', avatarUrl: null });
 
+export function UserProvider({ children }) {
   const [profile, setProfile] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { id: generateId(), username: '', displayName: '', avatarUrl: null };
+    return EMPTY_PROFILE();
   });
 
   const [setupDone, setSetupDone] = useState(() => {
@@ -30,15 +28,14 @@ export function UserProvider({ children }) {
     catch { return false; }
   });
 
-  // Persist profile — but never during a reset
+  // Only persist when setup is actually complete — never during reset state
   useEffect(() => {
-    if (isResetting.current) return;
-    if (!setupDone) return; // don't write empty profile
+    if (!setupDone) return;
+    if (!profile.displayName) return; // never persist empty profile
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch {}
   }, [profile, setupDone]);
 
   const completeSetup = useCallback((displayName, avatarUrl = null) => {
-    isResetting.current = false;
     const trimmed = displayName.trim() || 'Listener';
     const newProfile = {
       id: generateId(),
@@ -46,26 +43,22 @@ export function UserProvider({ children }) {
       username: trimmed.toLowerCase().replace(/\s+/g, '_'),
       avatarUrl,
     };
+    // Write to storage first, then set state — prevents any race
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newProfile)); } catch {}
     setProfile(newProfile);
     setSetupDone(true);
-    // Persist immediately — don't wait for useEffect
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newProfile)); } catch {}
   }, []);
 
   const updateProfile = useCallback((updates) => {
     setProfile(p => ({ ...p, ...updates }));
-    setSetupDone(true);
   }, []);
 
-  // Reset profile — clears storage AND state atomically, shows setup screen
   const resetProfile = useCallback(() => {
-    isResetting.current = true;
+    // Clear storage first, then clear state — order matters
     localStorage.removeItem(STORAGE_KEY);
-    const freshProfile = { id: generateId(), username: '', displayName: '', avatarUrl: null };
-    setProfile(freshProfile);
     setSetupDone(false);
-    // Allow writes again after state settles
-    setTimeout(() => { isResetting.current = false; }, 500);
+    setProfile(EMPTY_PROFILE());
+    // No timers, no refs — state is the only source of truth
   }, []);
 
   return (
