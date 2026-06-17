@@ -25,7 +25,9 @@
 
 ## Install
 
-Download the latest build for your platform from [Releases](../../releases/latest):
+Download the latest build for your platform from https://yami-app.netlify.app/
+
+OR YOU CAN DOWNLOAD IT FROM RELEASES TOO.
 
 - **Linux** — `yami_<version>_amd64.deb` → `sudo dpkg -i yami_*.deb`
 - **Windows** — `yami-Setup-<version>.exe` (installer) or portable `.exe`
