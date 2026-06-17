@@ -12,9 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMediaPrev:      (cb) => { ipcRenderer.on('media-prev',       cb); return () => ipcRenderer.removeAllListeners('media-prev'); },
   onMediaStop:      (cb) => { ipcRenderer.on('media-stop',       cb); return () => ipcRenderer.removeAllListeners('media-stop'); },
 
-  // Backend status
-  onBackendStatus: (cb) => { ipcRenderer.on('backend-status', (_, d) => cb(d)); return () => ipcRenderer.removeAllListeners('backend-status'); },
-
   // Auto-updater
   onUpdateDownloaded: (cb) => { ipcRenderer.on('update-downloaded', (_, d) => cb(d)); return () => ipcRenderer.removeAllListeners('update-downloaded'); },
 });

@@ -1,51 +1,11 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, nativeImage } = require('electron');
-const path    = require('path');
-const { spawn } = require('child_process');
+const path = require('path');
 
 app.commandLine.appendSwitch('no-sandbox');
 
 const isDev = !app.isPackaged;
 
 let mainWindow;
-let backendProcess;
-let backendRestarts = 0;
-const MAX_BACKEND_RESTARTS = 5;
-
-// ── Backend ───────────────────────────────────────────────────────────────────
-function startBackend(notifyWindow = false) {
-  const serverPath = isDev
-    ? path.join(__dirname, '..', 'server.js')
-    : path.join(process.resourcesPath, 'server.bundle.js');
-
-  const ytDlpPath = isDev
-    ? (process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp')
-    : path.join(process.resourcesPath, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
-
-  backendProcess = spawn(process.execPath, [serverPath], {
-    env: { ...process.env, PORT: '3001', YTDLP_PATH: ytDlpPath, ELECTRON_RUN_AS_NODE: '1' },
-    stdio: 'inherit',
-    ...(process.platform === 'win32' ? { windowsHide: true } : {}),
-  });
-
-  backendProcess.on('error', (err) => {
-    console.error('Backend error:', err);
-    if (mainWindow) mainWindow.webContents.send('backend-status', { ok: false, error: err.message });
-  });
-
-  backendProcess.on('exit', (code) => {
-    if (code === 0 || backendRestarts >= MAX_BACKEND_RESTARTS) return;
-    backendRestarts++;
-    console.warn(`Backend exited (code ${code}), restarting (${backendRestarts}/${MAX_BACKEND_RESTARTS})…`);
-    if (mainWindow) mainWindow.webContents.send('backend-status', { ok: false, restarting: true });
-    setTimeout(() => {
-      startBackend(true);
-    }, 1500 * backendRestarts); // exponential-ish backoff
-  });
-
-  if (notifyWindow && mainWindow) {
-    setTimeout(() => mainWindow.webContents.send('backend-status', { ok: true }), 2000);
-  }
-}
 
 // ── Media keys (global shortcuts) ─────────────────────────────────────────────
 function registerMediaKeys() {
@@ -57,10 +17,9 @@ function registerMediaKeys() {
 }
 
 // ── IPC handlers ──────────────────────────────────────────────────────────────
-ipcMain.on('window-minimize',    () => mainWindow?.minimize());
-ipcMain.on('window-maximize',    () => { if (mainWindow?.isMaximized()) mainWindow.unmaximize(); else mainWindow?.maximize(); });
-ipcMain.on('window-close',       () => mainWindow?.close());
-ipcMain.on('backend-restarted',  () => { backendRestarts = 0; });
+ipcMain.on('window-minimize', () => mainWindow?.minimize());
+ipcMain.on('window-maximize', () => { if (mainWindow?.isMaximized()) mainWindow.unmaximize(); else mainWindow?.maximize(); });
+ipcMain.on('window-close',    () => mainWindow?.close());
 
 // ── Window ─────────────────────────────────────────────────────────────────────
 function createWindow() {
@@ -73,7 +32,6 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false,
     },
     icon: path.join(__dirname, '..', 'build-resources', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
   });
@@ -83,7 +41,7 @@ function createWindow() {
   const url = isDev
     ? 'http://localhost:3000'
     : `file://${path.join(__dirname, '..', 'build', 'index.html')}`;
-  setTimeout(() => mainWindow.loadURL(url), isDev ? 0 : 1200);
+  mainWindow.loadURL(url);
 
   // Inject CSS after page loads to guarantee inputs are always focusable/typeable
   // Electron sometimes inherits -webkit-user-select:none from OS-level drag regions
@@ -137,7 +95,6 @@ function setupAutoUpdater() {
 
 // ── App lifecycle ──────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  startBackend();
   createWindow();
   registerMediaKeys();
   setupAutoUpdater();
@@ -146,11 +103,9 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
-  if (backendProcess) backendProcess.kill();
   if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
   globalShortcut.unregisterAll();
-  if (backendProcess) backendProcess.kill();
 });

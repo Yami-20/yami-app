@@ -1,0 +1,20 @@
+{
+  "appId": "com.yami.app",
+  "appName": "Yami",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#080808"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#080808",
+      "showSpinner": false
+    }
+  }
+}

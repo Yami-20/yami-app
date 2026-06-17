@@ -8,8 +8,9 @@ import {
   RiRadioLine, RiWifiOffLine,
 } from 'react-icons/ri';
 import { useYami } from '../context/YamiContext';
+import { BACKEND_URL } from '../config';
 
-const BACKEND = 'http://localhost:3001';
+const BACKEND = BACKEND_URL;
 const STREAM_TTL = 4 * 60 * 60 * 1000; // 4h — matches server
 
 async function fetchStreamUrl(trackName, artistName, signal) {
@@ -241,10 +242,10 @@ export default function YamiPlayer() {
       )}
 
       {/* LEFT */}
-      <div className="player-track-info">
+      <div className="player-track-info" onClick={() => setNowPlayingOpen(o => !o)}>
         {currentTrack?.artworkUrl60
           ? <img src={currentTrack.artworkUrl60} alt="art" className="player-art"
-              onClick={() => setNowPlayingOpen(o => !o)} style={{ cursor: 'pointer' }} />
+              style={{ cursor: 'pointer' }} />
           : <div className="player-art-placeholder"><RiMusicLine /></div>}
         <div className="player-meta">
           <div className="player-track-name">
@@ -254,13 +255,24 @@ export default function YamiPlayer() {
         </div>
         {currentTrack && (
           <button className={`player-like-btn${liked ? ' liked' : ''}`}
-            onClick={() => toggleLike(currentTrack)} title="Like">
+            onClick={(e) => { e.stopPropagation(); toggleLike(currentTrack); }} title="Like">
             {liked ? <RiHeartFill /> : <RiHeartLine />}
           </button>
         )}
       </div>
 
-      {/* CENTER */}
+      {/* MOBILE MINI CONTROLS — play/pause + next only, shown via CSS on narrow screens */}
+      <div className="mobile-mini-controls">
+        <button className="player-btn play" onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+          title={isPlaying ? 'Pause' : 'Play'}>
+          {loading ? <span className="player-spin" /> : isPlaying ? <RiPauseFill /> : <RiPlayFill />}
+        </button>
+        <button className="player-btn transport" onClick={(e) => { e.stopPropagation(); skipNext(); }} title="Next">
+          <RiSkipForwardFill />
+        </button>
+      </div>
+
+      {/* CENTER — desktop only (hidden on mobile via CSS) */}
       <div className="player-controls">
         <div className="player-buttons">
           <button className={`player-btn shuffle${shuffle ? ' active-mode' : ''}`}

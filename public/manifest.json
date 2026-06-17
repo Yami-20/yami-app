@@ -24,7 +24,7 @@
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#080811",
-  "background_color": "#080811",
+  "theme_color": "#080808",
+  "background_color": "#080808",
   "categories": ["music", "entertainment"]
 }

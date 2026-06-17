@@ -1,0 +1,14 @@
+{
+  "name": "yami-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Yami backend — iTunes proxy, yt-dlp stream resolver, Spotify playlist scraper",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "cors": "^2.8.6"
+  }
+}

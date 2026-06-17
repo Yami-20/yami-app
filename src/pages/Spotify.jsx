@@ -5,73 +5,14 @@ import {
 } from 'react-icons/ri';
 import { itunesSearch } from '../api/itunes';
 import { useYami }      from '../context/YamiContext';
+import { BACKEND_URL }  from '../config';
 
-// ── Platform detection ────────────────────────────────────────────────────────
+// ── Platform detection (client-side, just for UI hint) ────────────────────────
 function detectPlatform(url) {
   if (url.includes('spotify.com'))      return 'spotify';
   if (url.includes('music.youtube.com') || url.includes('youtube.com/playlist')) return 'youtube';
   if (url.includes('music.apple.com'))  return 'apple';
   return null;
-}
-
-// ── Extract playlist ID ───────────────────────────────────────────────────────
-function extractSpotifyId(url) {
-  const m = url.match(/playlist\/([a-zA-Z0-9]+)/);
-  return m ? m[1] : null;
-}
-function extractYouTubeId(url) {
-  const m = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-  return m ? m[1] : null;
-}
-function extractAppleId(url) {
-  const m = url.match(/playlist\/[^/]+\/([a-zA-Z0-9.-]+)/);
-  return m ? m[1] : null;
-}
-
-// ── Fetch track names from each platform ─────────────────────────────────────
-async function fetchSpotifyTracks(playlistId) {
-  // Use Spotify's open/anonymous endpoint — no auth needed for public playlists
-  const res = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(name,artists))`,
-    { headers: { Authorization: `Bearer ${await getAnonSpotifyToken()}` } }
-  );
-  if (!res.ok) throw new Error('Could not fetch Spotify playlist. Make sure it is public.');
-  const data = await res.json();
-  return (data.items || [])
-    .map(i => i.track)
-    .filter(Boolean)
-    .map(t => `${t.artists?.[0]?.name || ''} ${t.name}`.trim());
-}
-
-async function getAnonSpotifyToken() {
-  const res = await fetch('https://open.spotify.com/get_access_token?reason=transport&productType=web_player', {
-    headers: { 'User-Agent': 'Mozilla/5.0' },
-  });
-  const data = await res.json();
-  if (!data.accessToken) throw new Error('Could not get Spotify token');
-  return data.accessToken;
-}
-
-async function fetchYouTubeTracks(playlistId) {
-  // Scrape YouTube Music playlist page for track titles
-  const res = await fetch(`https://www.youtube.com/playlist?list=${playlistId}`, {
-    headers: { 'User-Agent': 'Mozilla/5.0' },
-  });
-  const html = await res.text();
-  const matches = [...html.matchAll(/"title":{"runs":\[{"text":"([^"]+)"/g)];
-  const titles  = matches.map(m => m[1]).filter(t => t && t !== 'YouTube Music');
-  if (!titles.length) throw new Error('Could not read YouTube playlist. Make sure it is public.');
-  return [...new Set(titles)].slice(0, 100);
-}
-
-async function fetchAppleTracks(playlistId) {
-  const res = await fetch(
-    `https://amp-api.music.apple.com/v1/catalog/us/playlists/${playlistId}/tracks?limit=100`,
-    { headers: { Origin: 'https://music.apple.com' } }
-  );
-  if (!res.ok) throw new Error('Could not fetch Apple Music playlist. Make sure it is public.');
-  const data = await res.json();
-  return (data.data || []).map(t => `${t.attributes?.artistName || ''} ${t.attributes?.name || ''}`.trim());
 }
 
 const PLATFORM_META = {
@@ -99,24 +40,13 @@ export default function ImportPage() {
   const handleImport = useCallback(async () => {
     setError(''); setStatus('fetching');
     try {
-      let trackQueries = [];
+      // Single backend call — server has no CORS restrictions and works
+      // identically on Electron, Android, and web (no webSecurity:false hack needed)
+      const res = await fetch(`${BACKEND_URL}/playlist/import?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not import playlist');
 
-      if (platform === 'spotify') {
-        const id = extractSpotifyId(url);
-        if (!id) throw new Error('Invalid Spotify playlist URL');
-        trackQueries = await fetchSpotifyTracks(id);
-      } else if (platform === 'youtube') {
-        const id = extractYouTubeId(url);
-        if (!id) throw new Error('Invalid YouTube playlist URL');
-        trackQueries = await fetchYouTubeTracks(id);
-      } else if (platform === 'apple') {
-        const id = extractAppleId(url);
-        if (!id) throw new Error('Invalid Apple Music playlist URL');
-        trackQueries = await fetchAppleTracks(id);
-      } else {
-        throw new Error('Unsupported platform. Paste a Spotify, YouTube Music, or Apple Music playlist URL.');
-      }
-
+      const trackQueries = (data.tracks || []).map(t => t.query).filter(Boolean);
       if (!trackQueries.length) throw new Error('No tracks found in this playlist.');
 
       setStatus('importing');
@@ -138,7 +68,7 @@ export default function ImportPage() {
       setError(e.message);
       setStatus('error');
     }
-  }, [url, platform, addManyToQueue, showToast]);
+  }, [url, addManyToQueue, showToast]);
 
   const meta = platform ? PLATFORM_META[platform] : null;
 

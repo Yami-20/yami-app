@@ -1,6 +1,6 @@
 {
   "name": "yami",
-  "version": "1.6.4",
+  "version": "2.0.0",
   "description": "Yami — a sleek, intelligent music player with radio mode and smart song suggestions.",
   "private": true,
   "main": "electron/main.js",
@@ -18,33 +18,36 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "http-proxy-middleware": "^4.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.6.0",
     "react-router-dom": "^7.16.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",
-    "electron-updater": "^6.3.0"
+    "electron-updater": "^6.3.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
-    "esbuild": "^0.21.0",
-    "wait-on": "^8.0.0"
+    "wait-on": "^8.0.0",
+    "express": "^5.2.1",
+    "cors": "^2.8.6",
+    "@capacitor/cli": "^7.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "bundle-server": "esbuild server.js --bundle --platform=node --outfile=build-resources/server.bundle.js --external:yt-dlp",
     "test": "react-scripts test",
     "electron:dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "npm run build && npm run bundle-server && electron-builder",
-    "electron:build:win": "npm run build && npm run bundle-server && electron-builder --win",
-    "electron:build:linux": "npm run build && npm run bundle-server && electron-builder --linux"
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:linux": "npm run build && electron-builder --linux",
+    "server:dev": "node server.js",
+    "cap:sync": "npx cap sync android",
+    "cap:build:android": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "eslintConfig": {
     "extends": [
@@ -95,16 +98,6 @@
         "--no-sandbox"
       ],
       "maintainer": "Yami <yami@yami.app>",
-      "extraResources": [
-        {
-          "from": "build-resources/server.bundle.js",
-          "to": "server.bundle.js"
-        },
-        {
-          "from": "build-resources/yt-dlp",
-          "to": "yt-dlp"
-        }
-      ],
       "desktop": {
         "Name": "Yami",
         "Comment": "Music player",
@@ -125,16 +118,6 @@
           "arch": [
             "x64"
           ]
-        }
-      ],
-      "extraResources": [
-        {
-          "from": "build-resources/server.bundle.js",
-          "to": "server.bundle.js"
-        },
-        {
-          "from": "build-resources/yt-dlp.exe",
-          "to": "yt-dlp.exe"
         }
       ]
     },

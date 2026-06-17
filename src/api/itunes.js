@@ -1,4 +1,6 @@
-const BASE = 'http://localhost:3001/itunes/search';
+import { BACKEND_URL } from '../config';
+
+const BASE = `${BACKEND_URL}/itunes/search`;
 
 // In-memory dedup cache: key → Promise (prevents parallel duplicate requests)
 const inFlight = new Map();

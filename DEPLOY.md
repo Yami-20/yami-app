@@ -1,80 +1,62 @@
-# Deploying Yami — Desktop (Linux + Windows)
+# Deploying Yami
+
+Yami ships to three platforms from one codebase: Linux/Windows via Electron, and Android via Capacitor. All three talk to the same hosted backend on Render — there's no local server to spawn.
 
 ## Prerequisites
 - Node.js 20+
-- Git
-- GitHub account with this repo
+- For Android: JDK 21, Android SDK (or just let CI build it)
 
 ---
 
-## Trigger a build via tag
+## Backend (deploy once)
 
-Create a version tag to kick off GitHub Actions:
+See [server-deploy/README.md](server-deploy/README.md). Once live, set the URL in `.github/workflows/build.yml` under `env.REACT_APP_BACKEND_URL` — all three CI build jobs read from there.
+
+---
+
+## Trigger a release build
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.x.x
+git push origin v1.x.x
 ```
 
-GitHub Actions will automatically:
-- Build the Linux `.deb` on Ubuntu
-- Build the Windows `.exe` + portable on Windows
+GitHub Actions builds and attaches to the release automatically:
+- Linux `.deb`
+- Windows `.exe` (installer + portable)
+- Android `.apk` (debug-signed)
 
-Watch progress at: https://github.com/Yami-20/yami-app/actions
-
-Downloads appear at: https://github.com/Yami-20/yami-app/releases
+Watch progress: https://github.com/Yami-20/yami-app/actions
 
 ---
 
 ## Local development
 
-### Web app (React only)
 ```bash
 npm install --legacy-peer-deps
-npm start
-# Open http://localhost:3000
+
+npm start              # React dev server only, http://localhost:3000
+npm run electron:dev   # Electron desktop app
+npm run server:dev     # run the backend locally (optional — only if testing backend changes)
 ```
 
-### Desktop app (Electron dev mode)
+By default the app points at the production Render backend. To use a local backend instead:
+
 ```bash
-npm install --legacy-peer-deps
-node server.js &
-npm run electron:dev
+REACT_APP_BACKEND_URL=http://localhost:3001 npm start
 ```
 
 ### Build locally
 
 ```bash
-# Linux .deb
-npm run electron:build:linux
-
-# Windows .exe (run on Windows)
-npm run electron:build:win
-```
-
----
-
-## yt-dlp (required for streaming)
-
-The CI workflow downloads yt-dlp automatically. For local builds:
-
-**Linux:**
-```bash
-mkdir -p build-resources
-curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o build-resources/yt-dlp
-chmod a+rx build-resources/yt-dlp
-```
-
-**Windows:**
-```powershell
-Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "build-resources/yt-dlp.exe"
+npm run electron:build:linux   # Linux .deb
+npm run electron:build:win     # Windows .exe (run on Windows)
+npm run cap:build:android      # Android .apk (requires Android SDK)
 ```
 
 ---
 
 ## Versioning
-
-Bump `version` in `package.json`, then tag:
 
 ```bash
 # patch: bug fixes       → 1.1.0 → 1.1.1
@@ -89,10 +71,6 @@ git push origin v1.x.x
 
 ## Signing (optional)
 
-### Windows code signing
-Add to GitHub Secrets:
-- `WIN_CSC_LINK` — base64-encoded `.pfx` file
-- `WIN_CSC_KEY_PASSWORD` — certificate password
+**Windows:** add `WIN_CSC_LINK` (base64 `.pfx`) and `WIN_CSC_KEY_PASSWORD` to GitHub Secrets.
 
-### Self-signed (dev only)
-No config needed — the build works unsigned for testing.
+**Android:** the CI build produces a debug-signed APK. For a Play Store release build, you'll need a release keystore — not currently wired into CI.
