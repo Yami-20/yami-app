@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Yami</string>
+    <string name="title_activity_main">Yami</string>
+    <string name="package_name">com.yami.app</string>
+    <string name="custom_url_scheme">com.yami.app</string>
+</resources>
