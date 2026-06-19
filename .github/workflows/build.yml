@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  REACT_APP_BACKEND_URL: https://yami-backend.onrender.com
+  REACT_APP_BACKEND_URL: https://yami-backend-ge8b.onrender.com
 
 jobs:
 

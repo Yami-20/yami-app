@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: yami-backend
+    name: yami-backend-ge8b
     runtime: docker
     dockerfilePath: ./server-deploy/Dockerfile
     dockerContext: .

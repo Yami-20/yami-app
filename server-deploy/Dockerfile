@@ -11,7 +11,7 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_lin
 WORKDIR /app
 
 COPY server-deploy/package*.json ./
-RUN npm ci --omit=dev --legacy-peer-deps
+RUN npm install --omit=dev --legacy-peer-deps
 
 COPY server-deploy/server.js ./
 
