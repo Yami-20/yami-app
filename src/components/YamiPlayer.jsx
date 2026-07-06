@@ -14,12 +14,16 @@ const BACKEND = BACKEND_URL;
 const STREAM_TTL = 4 * 60 * 60 * 1000; // 4h — matches server
 
 async function fetchStreamUrl(trackName, artistName, signal) {
-  const q   = `${trackName} ${artistName}`;
-  const res = await fetch(`${BACKEND}/stream?q=${encodeURIComponent(q)}`, { signal });
-  if (!res.ok) throw new Error('Stream fetch failed');
+  const q = `${trackName} ${artistName}`;
+  // Warm the server cache and verify the track exists
+  const res = await fetch(`${BACKEND}/stream/resolve?q=${encodeURIComponent(q)}`, { signal });
+  if (!res.ok) throw new Error('Stream resolve failed');
   const data = await res.json();
-  if (!data.url) throw new Error('No URL');
-  return data.url;
+  if (!data.url) throw new Error('No stream available');
+  // Return OUR proxy URL — the audio element loads from our backend which
+  // pipes YouTube CDN bytes. This avoids CORS on file:// (Electron) and
+  // capacitor:// (Android) where the browser blocks cross-origin audio.
+  return `${BACKEND}/stream?q=${encodeURIComponent(q)}`;
 }
 
 export default function YamiPlayer() {

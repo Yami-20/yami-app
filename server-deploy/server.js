@@ -68,44 +68,84 @@ app.get('/itunes/search', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── yt-dlp stream (spawn — no shell injection) ────────────────────────────────
+// ── yt-dlp stream proxy ───────────────────────────────────────────────────────
+// The audio is piped through our server so the client never touches
+// YouTube CDN directly — fixes CORS on Electron (file://) and Android
+// (capacitor://) where the browser enforces strict cross-origin rules.
 const streamCache = new Map(); // query → { url, ts }
-const STREAM_TTL  = 4 * 60 * 60 * 1000; // 4h — URLs expire ~6h
+const STREAM_TTL  = 4 * 60 * 60 * 1000; // 4h
 
-app.get('/stream', (req, res) => {
+function resolveStreamUrl(q) {
+  const cached = streamCache.get(q);
+  if (cached && Date.now() - cached.ts < STREAM_TTL) return Promise.resolve(cached.url);
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn(YTDLP, [
+      `ytsearch1:${q}`, '--get-url', '-f', 'bestaudio/best',
+      '--no-playlist', '--no-warnings',
+    ]);
+    let out = '', err = '';
+    proc.stdout.on('data', d => { out += d.toString(); });
+    proc.stderr.on('data', d => { err += d.toString(); });
+    proc.on('close', code => {
+      if (code !== 0 || !out.trim()) return reject(new Error(err.slice(0, 300) || 'yt-dlp failed'));
+      const url = out.trim().split('\n')[0];
+      streamCache.set(q, { url, ts: Date.now() });
+      if (streamCache.size > 100) streamCache.delete(streamCache.keys().next().value);
+      resolve(url);
+    });
+    proc.on('error', reject);
+  });
+}
+
+// /stream?q=... — pipe audio bytes through our server (CORS-safe)
+app.get('/stream', async (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'No query' });
 
-  const cached = streamCache.get(q);
-  if (cached && Date.now() - cached.ts < STREAM_TTL) return res.json({ url: cached.url });
+  try {
+    const url = await resolveStreamUrl(q);
+    const headers = { 'User-Agent': UA };
+    if (req.headers.range) headers['Range'] = req.headers.range;
 
-  const proc = spawn(YTDLP, [
-    `ytsearch1:${q}`, '--get-url', '-f', 'bestaudio', '--no-playlist',
-  ]);
-  let out = '';
-  let err = '';
-  proc.stdout.on('data', d => { out += d.toString(); });
-  proc.stderr.on('data', d => { err += d.toString(); });
-  proc.on('close', code => {
-    if (code !== 0 || !out.trim()) {
-      return res.status(500).json({ error: 'yt-dlp failed', detail: err.slice(0, 200) });
-    }
-    const url = out.trim().split('\n')[0];
-    streamCache.set(q, { url, ts: Date.now() });
-    // Trim stream cache to 100 entries
-    if (streamCache.size > 100) streamCache.delete(streamCache.keys().next().value);
-    res.json({ url });
-  });
-  proc.on('error', e => res.status(500).json({ error: e.message }));
+    const upstream = require('https').request(url, { headers }, (upRes) => {
+      const status = upRes.statusCode === 206 ? 206 : 200;
+      res.writeHead(status, {
+        'Content-Type':   upRes.headers['content-type']   || 'audio/webm',
+        'Content-Length': upRes.headers['content-length'] || '',
+        'Content-Range':  upRes.headers['content-range']  || '',
+        'Accept-Ranges':  'bytes',
+        'Cache-Control':  'no-store',
+        'Access-Control-Allow-Origin': '*',
+      });
+      upRes.pipe(res);
+    });
+    upstream.on('error', () => res.status(502).json({ error: 'Upstream audio failed' }));
+    req.on('close', () => upstream.destroy());
+    upstream.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── Stream cache freshness check (client calls this before playing) ───────────
+// /stream/resolve?q=... — return URL only (for prefetch warmup)
+app.get('/stream/resolve', async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'No query' });
+  try {
+    const url = await resolveStreamUrl(q);
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// /stream/check — is a URL cached and fresh?
 app.get('/stream/check', (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ fresh: false });
   const cached = streamCache.get(q);
-  const fresh  = cached && (Date.now() - cached.ts < STREAM_TTL);
-  res.json({ fresh: !!fresh });
+  res.json({ fresh: !!(cached && Date.now() - cached.ts < STREAM_TTL) });
 });
 
 // ── Playlist import — Spotify / YouTube Music / Apple Music ───────────────────
